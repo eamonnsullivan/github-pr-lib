@@ -11,7 +11,7 @@
     }
   }")
 
-(def create-pull-request-query "mutation
+(def create-pull-request-mutation "mutation
 ($title: String!, $body: String!, $repositoryId: ID!, $baseBranch: String!, $mergingBranch: String!, $draft: Boolean!) {
   createPullRequest(input: {
     title: $title,
@@ -41,3 +41,8 @@
         payload (json/write-str {:query get-repo-id-query :variables variables})
         response (http-post github-url payload (request-opts access-token))]
     (-> (json/read-str (response :body) :key-fn keyword) :data :repository :id)))
+
+(defn createpr
+  [access-token owner repo-name title body base-branch merging-branch draft]
+  (let [repo-id (get-repo-id access-token owner repo-name)]
+    repo-id))
