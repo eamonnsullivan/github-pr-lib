@@ -44,5 +44,10 @@
 
 (defn createpr
   [access-token owner repo-name title body base-branch merging-branch draft]
-  (let [repo-id (get-repo-id access-token owner repo-name)]
-    repo-id))
+  (let [repo-id (get-repo-id access-token owner repo-name)
+        variables {:title title :body body :baseBranch base-branch :mergingBranch merging-branch :draft draft}
+        payload (json/write-str {:query create-pull-request-mutation :variables variables})]
+    (if repo-id
+      (let [response (http-post github-url payload (request-opts access-token))]
+        (-> (json/read-str (response :body) :key-fn keyword) :data :createPullRequest :pullRequest :id))
+      nil)))

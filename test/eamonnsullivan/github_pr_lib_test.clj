@@ -18,9 +18,9 @@
 
 (defn make-fake-post
   [query-response mutation-response]
-  (fn [_ payload _] (if (string/includes? payload "query")
-                      {:body query-response}
-                      {:body mutation-response})))
+  (fn [_ payload _] (if (string/includes? payload "mutation")
+                      {:body mutation-response}
+                      {:body query-response})))
 
 (deftest test-createpr
   (with-redefs [sut/http-post (make-fake-post repo-id-response-success create-pr-response-success)]
