@@ -27,6 +27,23 @@
   }
 }")
 
+(def search-for-pr-id-query "query FindPullRequests ($owner: String!, $name: String!, $first: Int!, $after: String)  {
+    repository(owner:$owner, name:$name) {
+      id
+      pullRequests(first: $first, after: $after) {
+        nodes {
+          id
+          url
+        }
+        pageInfo {
+      	  hasNextPage
+      	  endCursor
+        }
+      }
+    }
+  }
+")
+
 (defn request-opts
   [access-token]
   {:ssl? true :headers {"Authorization" (str "bearer " access-token)}})
@@ -35,12 +52,21 @@
   [url payload opts]
   (client/post url (merge {:content-type :json :body payload} opts)))
 
+(defn get-owner-and-name
+  [url]
+
+  {:owner "someone" :name "something"})
+
 (defn get-repo-id
   [access-token owner repo-name]
   (let [variables {:owner owner :name repo-name}
         payload (json/write-str {:query get-repo-id-query :variables variables})
-        response (http-post github-url payload (request-opts access-token))]
-    (-> (json/read-str (response :body) :key-fn keyword) :data :repository :id)))
+        response (http-post github-url payload (request-opts access-token))
+        body (json/read-str (response :body) :key-fn keyword)
+        errors (:errors body)]
+    (if errors
+      (throw (ex-info (:message (first errors)) response))
+      (-> body :data :repository :id))))
 
 (defn createpr
   [access-token owner repo-name title body base-branch merging-branch draft]
@@ -48,6 +74,10 @@
         variables {:title title :body body :baseBranch base-branch :mergingBranch merging-branch :draft draft}
         payload (json/write-str {:query create-pull-request-mutation :variables variables})]
     (if repo-id
-      (let [response (http-post github-url payload (request-opts access-token))]
-        (-> (json/read-str (response :body) :key-fn keyword) :data :createPullRequest :pullRequest :id))
+      (let [response (http-post github-url payload (request-opts access-token))
+            body (json/read-str (response :body) :key-fn keyword)
+            errors (:errors body)]
+        (if errors
+          (throw (ex-info (:message (first errors)) response))
+          (-> (json/read-str (response :body) :key-fn keyword) :data :createPullRequest :pullRequest :id)))
       nil)))
