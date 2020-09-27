@@ -10,32 +10,25 @@ A small, very simple library for opening, closing, approving and commenting on p
 (def options {:repo "my-org/my-repo"
               :title "A title for the pull request"
               :body "The body of the pull request"
-              :base-branch "main-branch-name"
-              :head-branch "your-branch-name"
-              :draft true
+              :base "main-branch-name"
+              :branch "your-branch-name"
+              :draft false
               :maintainerCanModify true})
-(def pullrequest (createpr token options))
+(def pullrequest-id (create-pull-request token options))
 ```
-### Modify a pull request
-```
-(modifypr token (update pullrequest :isDraft not)) ;; toggle the "draft" property
-```
+The `draft` option defaults to false, while the `maintainerCanModify` option defaults to true.
+
+### Toggle a pull request's draft status
+TBD
+### Change a pull request title
+TBD
 ### Mark a pull request ready for a review
-```
-(ready-for-review token pullrequest)
-```
+TBD
 ### Comment on a pull request
-```
-(commentpr token pullrequest "A review comment")
-```
+TBD
 ### Close a pull request
-```
-(closepr token pullrequest "Optional closing comment")
-```
+TBD
 ### Merge a pull request
-```
-(def result (mergepr token pullrequest))
-```
 
 Run the project's tests (they'll fail until you edit them):
 

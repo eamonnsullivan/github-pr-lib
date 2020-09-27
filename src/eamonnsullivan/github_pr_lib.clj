@@ -12,16 +12,18 @@
   }")
 
 (def create-pull-request-mutation "mutation
-($title: String!, $body: String!, $repositoryId: ID!, $baseBranch: String!, $mergingBranch: String!, $draft: Boolean!) {
+($title: String!, $body: String!, $repositoryId: ID!, $base: String!, $branch: String!, $draft: Boolean!, $maintainerCanModify: Boolean) {
   createPullRequest(input: {
     title: $title,
     body: $body,
     repositoryId: $repositoryId,
-    baseRefName: $baseBranch,
-    headRefName: $mergingBranch,
-    draft: $draft
+    baseRefName: $base,
+    headRefName: $branch,
+    draft: $draft,
+    maintainerCanModify: $maintainerCanModify
   }) {
     pullRequest {
+      id
       permalink
     }
   }
@@ -52,13 +54,23 @@
   [url payload opts]
   (client/post url (merge {:content-type :json :body payload} opts)))
 
-(defn get-owner-and-name
+(defn parse-repo
   [url]
-
-  {:owner "someone" :name "something"})
+  (let [matches (re-matches #"(https://github.com/)?([^/]*)/([^/]*).*$" url)
+        [_ _ owner name] matches]
+    (if (and owner name (not-empty owner) (not-empty name))
+      {:owner owner :name name}
+      nil)))
 
 (defn get-repo-id
-  [access-token owner repo-name]
+  ([access-token url]
+   (let [repo (parse-repo url)
+         owner (:owner repo)
+         name (:name repo)]
+     (if repo
+       (get-repo-id access-token owner name)
+       nil)))
+  ([access-token owner repo-name]
   (let [variables {:owner owner :name repo-name}
         payload (json/write-str {:query get-repo-id-query :variables variables})
         response (http-post github-url payload (request-opts access-token))
@@ -66,18 +78,34 @@
         errors (:errors body)]
     (if errors
       (throw (ex-info (:message (first errors)) response))
-      (-> body :data :repository :id))))
+      (-> body :data :repository :id)))))
+
+(def create-pr-defaults {:draft false
+                         :maintainerCanModify true})
 
 (defn createpr
-  [access-token owner repo-name title body base-branch merging-branch draft]
-  (let [repo-id (get-repo-id access-token owner repo-name)
-        variables {:title title :body body :baseBranch base-branch :mergingBranch merging-branch :draft draft}
+  [access-token pull-request]
+  (let [{owner :owner
+         repo-name :name
+         title :title
+         body :body
+         base-branch :base
+         merging-branch :branch
+         draft :draft
+         maintainerCanModify :maintainerCanModify} (merge create-pr-defaults pull-request)
+        repo-id (get-repo-id access-token owner repo-name)
+        variables {:repositoryId repo-id
+                   :title title
+                   :body body
+                   :base base-branch
+                   :branch merging-branch
+                   :draft draft
+                   :maintainerCanModify maintainerCanModify}
         payload (json/write-str {:query create-pull-request-mutation :variables variables})]
-    (if repo-id
+    (when repo-id
       (let [response (http-post github-url payload (request-opts access-token))
             body (json/read-str (response :body) :key-fn keyword)
             errors (:errors body)]
         (if errors
           (throw (ex-info (:message (first errors)) response))
-          (-> (json/read-str (response :body) :key-fn keyword) :data :createPullRequest :pullRequest :id)))
-      nil)))
+          (-> (json/read-str (response :body) :key-fn keyword) :data :createPullRequest :pullRequest :id))))))
