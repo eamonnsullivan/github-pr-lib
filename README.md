@@ -7,35 +7,34 @@ A small, very simple library for opening, closing, approving and commenting on p
 ### Create a new pull request
 ```
 (def token (System/getenv "GITHUB_ACCESS_TOKEN"))
-(def options {:repo "my-org/my-repo"
+(def options {:owner "eamonnsullivan"
+              :name "github-pr-lib"
               :title "A title for the pull request"
               :body "The body of the pull request"
-              :base-branch "main-branch-name"
-              :head-branch "your-branch-name"
+              :base "main-branch-name"
+              :branch "your-branch-name"
               :draft true
               :maintainerCanModify true})
-(def pullrequest (createpr token options))
+(def pullrequest-id (create-pull-request token options))
 ```
-### Modify a pull request
+The `draft` and `maintainerCanModify` options default to true.
+
+### Update a pull request
 ```
-(modifypr token (update pullrequest :isDraft not)) ;; toggle the "draft" property
+(def updated {:title "A new title"
+              :body "A new body"
+              :maintainerCanModify false})
+(update-pull-request token "https://github.com/eamonnsullivan/github-pr-lib/pull/3" updated)
 ```
-### Mark a pull request ready for a review
+### Mark a pull request as ready for review
 ```
-(ready-for-review token pullrequest)
+(mark-ready-for-review token "https://github.com/eamonnsullivan/github-pr-lib/pull/3")
 ```
 ### Comment on a pull request
-```
-(commentpr token pullrequest "A review comment")
-```
+TBD
 ### Close a pull request
-```
-(closepr token pullrequest "Optional closing comment")
-```
+TBD
 ### Merge a pull request
-```
-(def result (mergepr token pullrequest))
-```
 
 Run the project's tests (they'll fail until you edit them):
 

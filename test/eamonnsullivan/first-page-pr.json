@@ -1,0 +1,35 @@
+{
+  "data": {
+    "repository": {
+      "id": "MDEwOlJlcG9zaXRvcnk5MjQyMDExMQ==",
+      "pullRequests": {
+        "nodes": [
+          {
+            "id": "MDExOlB1bGxSZXF1ZXN0MTQ4Mzc1OTg5",
+            "url": "https://github.com/eamonnsullivan/something/pull/1"
+          },
+          {
+            "id": "MDExOlB1bGxSZXF1ZXN0MTU5NjI3ODc2",
+            "url": "https://github.com/eamonnsullivan/something/pull/2"
+          },
+          {
+            "id": "MDExOlB1bGxSZXF1ZXN0MTU5NjgzMDQ4",
+            "url": "https://github.com/eamonnsullivan/something/pull/3"
+          },
+          {
+            "id": "MDExOlB1bGxSZXF1ZXN0MTU5NjkxNzYz",
+            "url": "https://github.com/eamonnsullivan/something/pull/4"
+          },
+          {
+            "id": "MDExOlB1bGxSZXF1ZXN0MTYwOTE1ODA0",
+            "url": "https://github.com/eamonnsullivan/something/pull/5"
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": true,
+          "endCursor": "Y3Vyc29yOnYyOpHOCZdhXA=="
+        }
+      }
+    }
+  }
+}
