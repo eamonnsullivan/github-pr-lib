@@ -24,14 +24,12 @@ The `draft` and `maintainerCanModify` options default to true.
 (def updated {:title "A new title"
               :body "A new body"
               :maintainerCanModify false})
-(def update-pull-request token "https://github.com/eamonnsullivan/github-pr-lib/pull/3" updated)
+(update-pull-request token "https://github.com/eamonnsullivan/github-pr-lib/pull/3" updated)
 ```
 ### Mark a pull request as ready for review
-
-### Change a pull request title
-TBD
-### Mark a pull request ready for a review
-TBD
+```
+(mark-ready-for-review token "https://github.com/eamonnsullivan/github-pr-lib/pull/3")
+```
 ### Comment on a pull request
 TBD
 ### Close a pull request

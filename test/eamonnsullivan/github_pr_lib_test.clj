@@ -12,6 +12,8 @@
 (def second-page (slurp "./test/eamonnsullivan/second-page-pr.json"))
 (def update-pr-success (slurp "./test/eamonnsullivan/update-pr-success.json"))
 (def update-pr-failure (slurp "./test/eamonnsullivan/update-pr-failure.json"))
+(def mark-ready-success (slurp "./test/eamonnsullivan/mark-ready-success.json"))
+(def mark-ready-failure (slurp "./test/eamonnsullivan/mark-ready-failure.json"))
 
 (deftest test-get-repo-id
   (with-redefs [sut/http-post (fn [_ _ _] {:body repo-id-response-success})]
@@ -162,3 +164,15 @@
                             (sut/update-pull-request "secret"
                                                      "https://github.com/eamonnsullivan/github-pr-lib/pull/3"
                                                      {:title "A new title" :body "A new body"}))))))
+(deftest test-mark-ready-for-review
+  (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
+                sut/http-post (fn [_ _ _] {:body mark-ready-success})]
+    (testing "marks pull request as ready for review"
+      (is (= "MDExOlB1bGxSZXF1ZXN0NDkzNzMxNzI2" (sut/mark-ready-for-review "secret"
+                                                                           "https://github.com/eamonnsullivan/github-pr-lib/pull/3")))))
+  (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
+                sut/http-post (fn [_ _ _] {:body mark-ready-failure})]
+    (testing "Throws exception on error"
+      (is (thrown-with-msg? RuntimeException #"Could not resolve to a node with the global id of 'invalid-id'"
+                            (sut/mark-ready-for-review "secret"
+                                                       "https://github.com/eamonnsullivan/github-pr-lib/pull/3"))))))

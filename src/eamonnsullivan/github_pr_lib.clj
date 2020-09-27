@@ -58,6 +58,15 @@
   }
 }")
 
+(def mark-ready-for-review-mutation "mutation ReadyForReview($pullRequestId: ID!) {
+  markPullRequestReadyForReview(input: {pullRequestId: $pullRequestId}) {
+    pullRequest {
+      id
+      permalink
+    }
+  }
+}")
+
 (defn request-opts
   [access-token]
   {:ssl? true :headers {"Authorization" (str "bearer " access-token)}})
@@ -177,3 +186,16 @@
         (if errors
           (throw (ex-info (:message (first errors)) response))
           (-> body  :data :updatePullRequest :pullRequest :id))))))
+
+(defn mark-ready-for-review
+  [access-token pull-request-url]
+  (let [pr-id (get-open-pr-id access-token pull-request-url)]
+    (when pr-id
+      (let [variables {:pullRequestId pr-id}
+            payload (json/write-str {:query mark-ready-for-review-mutation :variables variables})
+            response (http-post github-url payload (request-opts access-token))
+            body (json/read-str (response :body) :key-fn keyword)
+            errors (:errors body)]
+        (if errors
+          (throw (ex-info (:message (first errors)) response))
+          (-> body :data :markPullRequestReadyForReview :pullRequest :id))))))
