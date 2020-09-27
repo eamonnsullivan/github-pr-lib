@@ -4,6 +4,7 @@
             [clojure.data.json :as json]))
 
 (def github-url "https://api.github.com/graphql")
+(def ^:dynamic *search-page-size* 10)
 
 (def get-repo-id-query "query($owner: String!, $name: String!) {
     repository(owner:$owner, name:$name) {
@@ -32,7 +33,7 @@
 (def search-for-pr-id-query "query FindPullRequests ($owner: String!, $name: String!, $first: Int!, $after: String)  {
     repository(owner:$owner, name:$name) {
       id
-      pullRequests(first: $first, after: $after) {
+      pullRequests(first: $first, after: $after, states:[OPEN]) {
         nodes {
           id
           url
@@ -62,6 +63,14 @@
       {:owner owner :name name}
       nil)))
 
+(defn pull-request-number
+  [pull-request-url]
+  (let [matches (re-matches #"(https://github.com/)?[^/]*/[^/]*/pull/([0-9]*)" pull-request-url)
+        [_ _ number] matches]
+    (if (not-empty number)
+      (Integer/parseInt number)
+      nil)))
+
 (defn get-repo-id
   ([access-token url]
    (let [repo (parse-repo url)
@@ -80,10 +89,41 @@
       (throw (ex-info (:message (first errors)) response))
       (-> body :data :repository :id)))))
 
+(defn get-page-of-search-results
+  [access-token owner name page-size cursor]
+  (let [variables {:owner owner :name name :first page-size :after cursor}
+        payload (json/write-str {:query search-for-pr-id-query :variables variables})
+        response (http-post github-url payload (request-opts access-token))]
+    (json/read-str (response :body) :key-fn keyword)))
+
+(defn get-open-pr-id
+  ([access-token pull-request-url]
+   (let [repo (parse-repo pull-request-url)
+         prnum (pull-request-number pull-request-url)
+         owner (:owner repo)
+         name (:name repo)]
+     (if repo
+       (get-open-pr-id access-token owner name prnum)
+       nil)))
+  ([access-token owner name pull-request-number]
+   (let [pull-request-url (string/lower-case (format "https://github.com/%s/%s/pull/%s" owner name pull-request-number))
+         page (get-page-of-search-results access-token owner name *search-page-size* nil)]
+     (loop [page page
+            prs []]
+       (let [pageInfo (-> page :data :repository :pullRequests :pageInfo)
+             has-next (:hasNextPage pageInfo)
+             cursor (:endCursor pageInfo)
+             pull-requests (-> page :data :repository :pullRequests :nodes)
+             prs (concat prs pull-requests)]
+         (if-not has-next
+           (:id (first (filter #(= (:url %) pull-request-url) prs)))
+           (recur (get-page-of-search-results access-token owner name *search-page-size* cursor)
+                  prs)))))))
+
 (def create-pr-defaults {:draft false
                          :maintainerCanModify true})
 
-(defn createpr
+(defn create-pull-request
   [access-token pull-request]
   (let [{owner :owner
          repo-name :name

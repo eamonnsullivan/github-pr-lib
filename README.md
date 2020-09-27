@@ -7,7 +7,8 @@ A small, very simple library for opening, closing, approving and commenting on p
 ### Create a new pull request
 ```
 (def token (System/getenv "GITHUB_ACCESS_TOKEN"))
-(def options {:repo "my-org/my-repo"
+(def options {:owner "eamonnsullivan"
+              :name "github-pr-lib"
               :title "A title for the pull request"
               :body "The body of the pull request"
               :base "main-branch-name"
