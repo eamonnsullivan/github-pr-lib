@@ -47,6 +47,17 @@
   }
 ")
 
+(def update-pull-request-mutation "mutation UpdatePullRequest($pullRequestId: ID!, $title: String, $body: String) {
+  updatePullRequest(input: {pullRequestId: $pullRequestId,
+  title: $title,
+  body: $body}) {
+    pullRequest {
+      id
+      permalink
+    }
+  }
+}")
+
 (defn request-opts
   [access-token]
   {:ssl? true :headers {"Authorization" (str "bearer " access-token)}})
@@ -120,7 +131,7 @@
            (recur (get-page-of-search-results access-token owner name *search-page-size* cursor)
                   prs)))))))
 
-(def create-pr-defaults {:draft false
+(def create-pr-defaults {:draft true
                          :maintainerCanModify true})
 
 (defn create-pull-request
@@ -149,3 +160,20 @@
         (if errors
           (throw (ex-info (:message (first errors)) response))
           (-> (json/read-str (response :body) :key-fn keyword) :data :createPullRequest :pullRequest :id))))))
+
+(defn update-pull-request
+  [access-token pull-request-url updated]
+  (let [{title :title
+         body :body} updated
+        pr-id (get-open-pr-id access-token pull-request-url)]
+    (when pr-id
+      (let [variables {:pullRequestId pr-id
+                       :title title
+                       :body body}
+            payload (json/write-str {:query update-pull-request-mutation :variables variables})
+            response (http-post github-url payload (request-opts access-token))
+            body (json/read-str (response :body) :key-fn keyword)
+            errors (:errors body)]
+        (if errors
+          (throw (ex-info (:message (first errors)) response))
+          (-> body  :data :updatePullRequest :pullRequest :id))))))

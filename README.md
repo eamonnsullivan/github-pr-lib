@@ -13,14 +13,21 @@ A small, very simple library for opening, closing, approving and commenting on p
               :body "The body of the pull request"
               :base "main-branch-name"
               :branch "your-branch-name"
-              :draft false
+              :draft true
               :maintainerCanModify true})
 (def pullrequest-id (create-pull-request token options))
 ```
-The `draft` option defaults to false, while the `maintainerCanModify` option defaults to true.
+The `draft` and `maintainerCanModify` options default to true.
 
-### Toggle a pull request's draft status
-TBD
+### Update a pull request
+```
+(def updated {:title "A new title"
+              :body "A new body"
+              :maintainerCanModify false})
+(def update-pull-request token "https://github.com/eamonnsullivan/github-pr-lib/pull/3" updated)
+```
+### Mark a pull request as ready for review
+
 ### Change a pull request title
 TBD
 ### Mark a pull request ready for a review

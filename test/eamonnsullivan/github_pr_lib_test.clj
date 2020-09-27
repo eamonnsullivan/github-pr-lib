@@ -10,6 +10,8 @@
 (def create-pr-response-failure (slurp "./test/eamonnsullivan/create-pr-response-failure.json"))
 (def first-page (slurp "./test/eamonnsullivan/first-page-pr.json"))
 (def second-page (slurp "./test/eamonnsullivan/second-page-pr.json"))
+(def update-pr-success (slurp "./test/eamonnsullivan/update-pr-success.json"))
+(def update-pr-failure (slurp "./test/eamonnsullivan/update-pr-failure.json"))
 
 (deftest test-get-repo-id
   (with-redefs [sut/http-post (fn [_ _ _] {:body repo-id-response-success})]
@@ -36,73 +38,73 @@
   [payload]
   (testing "the draft and maintainerCanModfy parameters have a default"
     (let [variables (:variables (json/read-str payload :key-fn keyword))]
-      (is (= false (:draft variables)))
+      (is (= true (:draft variables)))
       (is (= true (:maintainerCanModify variables))))))
 
 (defn assert-payload-defaults-overridden
   [payload]
   (testing "the draft and maintainerCanModify parameters can be overridden"
     (let [variables (:variables (json/read-str payload :key-fn keyword))]
-      (is (= true (:draft variables)))
+      (is (= false (:draft variables)))
       (is (= false (:maintainerCanModify variables))))))
 
-(deftest test-createpr
+(deftest test-create-pull-request
   (with-redefs [sut/http-post (make-fake-post repo-id-response-success create-pr-response-success nil nil)]
     (testing "Creates a pull request and returns the id"
       (is (= "MDExOlB1bGxSZXF1ZXN0NDkxMDgxOTQw"
              (sut/create-pull-request "secret-token" {:owner "owner"
-                                           :name "repo-name"
-                                           :title "some title"
-                                           :body "A body"
-                                           :base "main"
-                                           :branch "new-stuff"
-                                           :draft true})))))
+                                                      :name "repo-name"
+                                                      :title "some title"
+                                                      :body "A body"
+                                                      :base "main"
+                                                      :branch "new-stuff"
+                                                      :draft false})))))
   (with-redefs [sut/http-post (make-fake-post repo-id-response-success create-pr-response-failure nil nil)]
     (testing "Throws exception on create error"
       (is (thrown-with-msg? RuntimeException #"A pull request already exists for eamonnsullivan:create."
                             (sut/create-pull-request "secret-token" {:owner "owner"
-                                                          :name "repo-name"
-                                                          :title "some title"
-                                                          :body "A body"
-                                                          :base "main"
-                                                          :branch "new-stuff"
-                                                          :draft true})))))
+                                                                     :name "repo-name"
+                                                                     :title "some title"
+                                                                     :body "A body"
+                                                                     :base "main"
+                                                                     :branch "new-stuff"
+                                                                     :draft false})))))
   (with-redefs [sut/http-post (make-fake-post repo-id-response-failure nil nil nil)]
     (testing "Throws exception on failure to get repo id"
       (is (thrown-with-msg? RuntimeException
                             #"Could not resolve to a Repository with the name 'eamonnsullivan/not-there'."
                             (sut/create-pull-request "secret-token" {:owner "owner"
-                                                          :name "repo-name"
-                                                          :title "some title"
-                                                          :body "A body"
-                                                          :base "main"
-                                                          :branch "new-stuff"
-                                                          :draft true})))))
+                                                                     :name "repo-name"
+                                                                     :title "some title"
+                                                                     :body "A body"
+                                                                     :base "main"
+                                                                     :branch "new-stuff"
+                                                                     :draft false})))))
   (with-redefs [sut/http-post (make-fake-post repo-id-response-success create-pr-response-success nil mutation-payload-assert)]
-    (testing "The draft option defaults to false"
+    (testing "The draft option defaults to true"
       (sut/create-pull-request "secret-token" {:owner "owner"
-                                    :name "repo-name"
-                                    :title "some title"
-                                    :body "A body"
-                                    :base "main"
-                                    :branch "new-stuff"}))
+                                               :name "repo-name"
+                                               :title "some title"
+                                               :body "A body"
+                                               :base "main"
+                                               :branch "new-stuff"}))
     (testing "The maintainerCanModify option defaults to true"
       (sut/create-pull-request "secret-token" {:owner "owner"
-                                    :name "repo-name"
-                                    :title "some title"
-                                    :body "A body"
-                                    :base "main"
-                                    :branch "new-stuff"})))
+                                               :name "repo-name"
+                                               :title "some title"
+                                               :body "A body"
+                                               :base "main"
+                                               :branch "new-stuff"})))
   (with-redefs [sut/http-post (make-fake-post repo-id-response-success create-pr-response-success nil assert-payload-defaults-overridden)]
     (testing "The defaulted options can be overridden"
       (sut/create-pull-request "secret-token" {:owner "owner"
-                                    :name "repo-name"
-                                    :title "some title"
-                                    :body "A body"
-                                    :base "main"
-                                    :branch "new-stuff"
-                                    :draft true
-                                    :maintainerCanModify false}))))
+                                               :name "repo-name"
+                                               :title "some title"
+                                               :body "A body"
+                                               :base "main"
+                                               :branch "new-stuff"
+                                               :draft false
+                                               :maintainerCanModify false}))))
 
 
 (deftest test-parse-repo
@@ -133,10 +135,10 @@
   []
   (fn [_ payload _]
     (let [variables (:variables (json/read-str payload :key-fn keyword))
-        after (:after variables)]
-    (if after
-      {:body second-page}
-      {:body first-page}))))
+          after (:after variables)]
+      (if after
+        {:body second-page}
+        {:body first-page}))))
 
 (deftest test-get-pr-id
   (with-redefs [sut/http-post (fake-paging-post)]
@@ -145,3 +147,18 @@
       (is (= "MDExOlB1bGxSZXF1ZXN0MTYwOTE1ODA0" (sut/get-open-pr-id "secret" "https://github.com/eamonnsullivan/something/pull/5"))))
     (testing "finds pull request id on subsequent pages"
       (is (= "MDExOlB1bGxSZXF1ZXN0MTU5NjI3ODc2" (sut/get-open-pr-id "secret" "https://github.com/eamonnsullivan/something/pull/7"))))))
+
+(deftest test-update-pull-request
+  (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
+                sut/http-post (fn [_ _ _] {:body update-pr-success})]
+    (testing "updates a pull request"
+      (is (= "MDExOlB1bGxSZXF1ZXN0NDkzNzMxNzI2" (sut/update-pull-request "secret"
+                                                                         "https://github.com/eamonnsullivan/github-pr-lib/pull/3"
+                                                                         {:title "A new title" :body "A new body"})))))
+  (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
+                sut/http-post (fn [_ _ _] {:body update-pr-failure})]
+    (testing "Throws exception on update error"
+      (is (thrown-with-msg? RuntimeException #"Could not resolve to a node with the global id of 'invalid-id'"
+                            (sut/update-pull-request "secret"
+                                                     "https://github.com/eamonnsullivan/github-pr-lib/pull/3"
+                                                     {:title "A new title" :body "A new body"}))))))
