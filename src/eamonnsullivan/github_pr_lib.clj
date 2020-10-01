@@ -30,7 +30,7 @@
   }
 }")
 
-(def search-for-pr-id-query "query FindPullRequests ($owner: String!, $name: String!, $first: Int!, $after: String)  {
+(def search-for-pr-id-query "query ($owner: String!, $name: String!, $first: Int!, $after: String)  {
     repository(owner:$owner, name:$name) {
       id
       pullRequests(first: $first, after: $after, states:[OPEN]) {
@@ -47,7 +47,7 @@
   }
 ")
 
-(def update-pull-request-mutation "mutation UpdatePullRequest($pullRequestId: ID!, $title: String, $body: String) {
+(def update-pull-request-mutation "mutation ($pullRequestId: ID!, $title: String, $body: String) {
   updatePullRequest(input: {pullRequestId: $pullRequestId,
   title: $title,
   body: $body}) {
@@ -58,11 +58,21 @@
   }
 }")
 
-(def mark-ready-for-review-mutation "mutation ReadyForReview($pullRequestId: ID!) {
+(def mark-ready-for-review-mutation "mutation ($pullRequestId: ID!) {
   markPullRequestReadyForReview(input: {pullRequestId: $pullRequestId}) {
     pullRequest {
       id
       permalink
+    }
+  }
+}")
+
+(def add-comment-mutation "mutation ($pullRequestId: ID!, $body: String!) {
+  addComment(input: {subjectId: $pullRequestId, body: $body}) {
+    commentEdge {
+      node {
+        id
+      }
     }
   }
 }")
@@ -199,3 +209,16 @@
         (if errors
           (throw (ex-info (:message (first errors)) response))
           (-> body :data :markPullRequestReadyForReview :pullRequest :permalink))))))
+
+(defn add-pr-comment
+  [access-token pull-request-url comment-body]
+  (let [pr-id (get-open-pr-id access-token pull-request-url)]
+    (when pr-id
+      (let [variables {:pullRequestId pr-id :body comment-body}
+            payload (json/write-str {:query add-comment-mutation :variables variables})
+            response (http-post github-url payload (request-opts access-token))
+            body (json/read-str (response :body) :key-fn keyword)
+            errors (:errors body)]
+        (if errors
+          (throw (ex-info (:message (first errors)) response))
+          (-> body :data :addComment :commentEdge :node :url))))))

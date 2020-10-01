@@ -14,6 +14,8 @@
 (def update-pr-failure (slurp "./test/eamonnsullivan/update-pr-failure.json"))
 (def mark-ready-success (slurp "./test/eamonnsullivan/mark-ready-success.json"))
 (def mark-ready-failure (slurp "./test/eamonnsullivan/mark-ready-failure.json"))
+(def add-comment-success (slurp "./test/eamonnsullivan/add-comment-success.json"))
+(def add-comment-failure (slurp "./test/eamonnsullivan/add-comment-failure.json"))
 
 (deftest test-get-repo-id
   (with-redefs [sut/http-post (fn [_ _ _] {:body repo-id-response-success})]
@@ -176,3 +178,18 @@
       (is (thrown-with-msg? RuntimeException #"Could not resolve to a node with the global id of 'invalid-id'"
                             (sut/mark-ready-for-review "secret"
                                                        "https://github.com/eamonnsullivan/github-pr-lib/pull/3"))))))
+
+(deftest test-add-pr-comment
+  (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
+                sut/http-post (fn [_ _ _] {:body add-comment-success})]
+    (testing "adds comment to pull request"
+      (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4#issuecomment-702076146" (sut/add-pr-comment "secret"
+                                                                                                                 "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
+                                                                                                                 "This is a comment.")))))
+  (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
+                sut/http-post (fn [_ _ _] {:body add-comment-failure})]
+    (testing "Throws exception on error"
+      (is (thrown-with-msg? RuntimeException #"Could not resolve to a node with the global id of 'invalid'"
+                            (sut/add-pr-comment "secret"
+                                                "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
+                                                "This is a comment."))))))

@@ -35,7 +35,7 @@ The `draft` and `maintainerCanModify` options default to true.
 ```
 ### Comment on a pull request
 ```
-(add-pr-comment token new-pr-url "Another comment")
+(add-pr-comment token new-pr-url "Another comment.")
 ```
 ### Close a pull request
 TBD
