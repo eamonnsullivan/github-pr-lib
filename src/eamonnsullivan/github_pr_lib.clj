@@ -30,10 +30,27 @@
   }
 }")
 
-(def search-for-pr-id-query "query ($owner: String!, $name: String!, $first: Int!, $after: String)  {
+(def search-for-open-pr-id-query "query ($owner: String!, $name: String!, $first: Int!, $after: String)  {
     repository(owner:$owner, name:$name) {
       id
       pullRequests(first: $first, after: $after, states:[OPEN]) {
+        nodes {
+          id
+          url
+        }
+        pageInfo {
+      	  hasNextPage
+      	  endCursor
+        }
+      }
+    }
+  }
+")
+
+(def search-for-pr-id-query "query ($owner: String!, $name: String!, $first: Int!, $after: String)  {
+    repository(owner:$owner, name:$name) {
+      id
+      pullRequests(first: $first, after: $after) {
         nodes {
           id
           url
@@ -138,51 +155,47 @@
        (get-repo-id access-token owner name)
        nil)))
   ([access-token owner repo-name]
-  (let [variables {:owner owner :name repo-name}
-        payload (json/write-str {:query get-repo-id-query :variables variables})
-        response (http-post github-url payload (request-opts access-token))
-        body (json/read-str (response :body) :key-fn keyword)
-        errors (:errors body)]
-    (if errors
-      (throw (ex-info (:message (first errors)) response))
-      (-> body :data :repository :id)))))
+   (let [variables {:owner owner :name repo-name}
+         body (make-graphql-post access-token get-repo-id-query variables)]
+     (-> body :data :repository :id))))
 
 (defn get-page-of-search-results
-  [access-token owner name page-size cursor]
-  (let [variables {:owner owner :name name :first page-size :after cursor}
-        payload (json/write-str {:query search-for-pr-id-query :variables variables})
-        response (http-post github-url payload (request-opts access-token))]
-    (json/read-str (response :body) :key-fn keyword)))
+  ([access-token owner name page-size cursor]
+   (get-page-of-search-results access-token owner name page-size cursor true))
+  ([access-token owner name page-size cursor open?]
+   (let [variables {:owner owner :name name :first page-size :after cursor}
+         query (if open? search-for-open-pr-id-query search-for-pr-id-query)]
+     (make-graphql-post access-token query variables))))
+
+(defn get-pull-request-id
+  [access-token url must-be-open?]
+  (let [repo (parse-repo url)
+        prnum (pull-request-number url)
+        owner (:owner repo)
+        name (:name repo)]
+    (let [pull-request-url (string/lower-case (format "https://github.com/%s/%s/pull/%s" owner name prnum))
+          page (get-page-of-search-results access-token owner name *search-page-size* nil must-be-open?)]
+      (loop [page page
+             prs []]
+        (let [pageInfo (-> page :data :repository :pullRequests :pageInfo)
+              has-next (:hasNextPage pageInfo)
+              cursor (:endCursor pageInfo)
+              pull-requests (-> page :data :repository :pullRequests :nodes)
+              prs (concat prs pull-requests)]
+          (if-not has-next
+            (:id (first (filter #(= (:url %) pull-request-url) prs)))
+            (recur (get-page-of-search-results access-token owner name *search-page-size* cursor must-be-open?)
+                   prs)))))))
 
 (defn get-open-pr-id
   ([access-token pull-request-url]
-   (let [repo (parse-repo pull-request-url)
-         prnum (pull-request-number pull-request-url)
-         owner (:owner repo)
-         name (:name repo)]
-     (if repo
-       (get-open-pr-id access-token owner name prnum)
-       nil)))
-  ([access-token owner name pull-request-number]
-   (let [pull-request-url (string/lower-case (format "https://github.com/%s/%s/pull/%s" owner name pull-request-number))
-         page (get-page-of-search-results access-token owner name *search-page-size* nil)]
-     (loop [page page
-            prs []]
-       (let [pageInfo (-> page :data :repository :pullRequests :pageInfo)
-             has-next (:hasNextPage pageInfo)
-             cursor (:endCursor pageInfo)
-             pull-requests (-> page :data :repository :pullRequests :nodes)
-             prs (concat prs pull-requests)]
-         (if-not has-next
-           (:id (first (filter #(= (:url %) pull-request-url) prs)))
-           (recur (get-page-of-search-results access-token owner name *search-page-size* cursor)
-                  prs)))))))
+   (get-pull-request-id access-token pull-request-url true)))
 
 (defn modify-pull-request
   ([access-token url query]
    (modify-pull-request access-token url query nil))
   ([access-token url query variables]
-   (let [pr-id (get-open-pr-id access-token url)]
+   (let [pr-id (or (get-open-pr-id access-token url) (get-pull-request-id access-token url false))]
      (when pr-id
        (let [merged-variables (merge variables {:pullRequestId pr-id})]
          (make-graphql-post access-token query merged-variables))))))
@@ -220,7 +233,7 @@
 
 (defn mark-ready-for-review
   [access-token pull-request-url]
-  (let [body (modify-pull-request access-token pull-request-url update-pull-request-mutation)]
+  (let [body (modify-pull-request access-token pull-request-url mark-ready-for-review-mutation)]
     (-> body :data :markPullRequestReadyForReview :pullRequest :permalink)))
 
 (defn add-pull-request-comment
