@@ -45,8 +45,6 @@ The `draft` and `maintainerCanModify` options default to true.
 ```
 (reopen-pull-request token new-pr-url)
 ```
-### Merge a pull request
-TBD
 
 Run the project's tests (they'll fail until you edit them):
 
