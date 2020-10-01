@@ -46,12 +46,13 @@ The `draft` and `maintainerCanModify` options default to true.
 (reopen-pull-request token new-pr-url)
 ```
 
-Run the project's tests (they'll fail until you edit them):
+Run the project's tests:
 
     $ clojure -A:test:runner -M:runner
 
 Build a deployable jar of this library:
 
+    $ clojure -S:pom               # to update any dependencies
     $ clojure -A:jar -M:jar
 
 Install it locally:

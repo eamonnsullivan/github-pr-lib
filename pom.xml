@@ -3,9 +3,9 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>eamonnsullivan</groupId>
   <artifactId>github-pr-lib</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1</version>
   <name>github-pr-lib</name>
-  <description>FIXME: my new library.</description>
+  <description>Small library for creating and modifying Github pull requests.</description>
   <url>https://github.com/eamonnsullivan/github-pr-lib</url>
   <licenses>
     <license>
@@ -27,8 +27,18 @@
   <dependencies>
     <dependency>
       <groupId>org.clojure</groupId>
+      <artifactId>data.json</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
       <version>1.10.1</version>
+    </dependency>
+    <dependency>
+      <groupId>clj-http</groupId>
+      <artifactId>clj-http</artifactId>
+      <version>3.10.3</version>
     </dependency>
   </dependencies>
   <build>
