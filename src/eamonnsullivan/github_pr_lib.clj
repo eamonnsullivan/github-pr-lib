@@ -178,6 +178,16 @@
            (recur (get-page-of-search-results access-token owner name *search-page-size* cursor)
                   prs)))))))
 
+(defn modify-pull-request
+  ([access-token url query]
+   (modify-pull-request access-token url query nil))
+  ([access-token url query variables]
+   (let [pr-id (get-open-pr-id access-token url)]
+     (when pr-id
+       (let [merged-variables (merge variables {:pullRequestId pr-id})]
+         (make-graphql-post access-token query merged-variables))))))
+
+
 (def create-pr-defaults {:draft true
                          :maintainerCanModify true})
 
@@ -205,44 +215,25 @@
 
 (defn update-pull-request
   [access-token pull-request-url updated]
-  (let [{title :title
-         body :body} updated
-        pr-id (get-open-pr-id access-token pull-request-url)]
-    (when pr-id
-      (let [variables {:pullRequestId pr-id
-                       :title title
-                       :body body}
-            body (make-graphql-post access-token update-pull-request-mutation variables)]
-        (-> body  :data :updatePullRequest :pullRequest :permalink)))))
+  (let [body (modify-pull-request access-token pull-request-url update-pull-request-mutation updated)]
+    (-> body  :data :updatePullRequest :pullRequest :permalink)))
 
 (defn mark-ready-for-review
   [access-token pull-request-url]
-  (let [pr-id (get-open-pr-id access-token pull-request-url)]
-    (when pr-id
-      (let [variables {:pullRequestId pr-id}
-            body (make-graphql-post access-token mark-ready-for-review-mutation variables)]
-        (-> body :data :markPullRequestReadyForReview :pullRequest :permalink)))))
+  (let [body (modify-pull-request access-token pull-request-url update-pull-request-mutation)]
+    (-> body :data :markPullRequestReadyForReview :pullRequest :permalink)))
 
 (defn add-pull-request-comment
   [access-token pull-request-url comment-body]
-  (let [pr-id (get-open-pr-id access-token pull-request-url)]
-    (when pr-id
-      (let [variables {:pullRequestId pr-id :body comment-body}
-            body (make-graphql-post access-token add-comment-mutation variables)]
-        (-> body :data :addComment :commentEdge :node :url)))))
+  (let [body (modify-pull-request access-token pull-request-url add-comment-mutation {:body comment-body})]
+    (-> body :data :addComment :commentEdge :node :url)))
 
 (defn close-pull-request
   [access-token pull-request-url]
-  (let [pr-id (get-open-pr-id access-token pull-request-url)]
-    (when pr-id
-      (let [variables {:pullRequestId pr-id}
-            body (make-graphql-post access-token close-pull-request-mutation variables)]
-        (-> body :data :closePullRequest :pullRequest :permalink)))))
+  (let [body (modify-pull-request access-token pull-request-url close-pull-request-mutation)]
+    (-> body :data :closePullRequest :pullRequest :permalink)))
 
 (defn reopen-pull-request
   [access-token pull-request-url]
-  (let [pr-id (get-open-pr-id access-token pull-request-url)]
-    (when pr-id
-      (let [variables {:pullRequestId pr-id}
-            body (make-graphql-post access-token reopen-pull-request-mutation variables)]
-        (-> body :data :reopenPullRequest :pullRequest :permalink)))))
+  (let [body (modify-pull-request access-token pull-request-url reopen-pull-request-mutation)]
+    (-> body :data :reopenPullRequest :pullRequest :permalink)))
