@@ -4,9 +4,12 @@ A small, very simple library for opening, closing, approving and commenting on p
 
 ## Usage
 
-### Create a new pull request
 ```
 (def token (System/getenv "GITHUB_ACCESS_TOKEN"))
+```
+
+### Create a new pull request
+```
 (def options {:owner "eamonnsullivan"
               :name "github-pr-lib"
               :title "A title for the pull request"
@@ -15,7 +18,7 @@ A small, very simple library for opening, closing, approving and commenting on p
               :branch "your-branch-name"
               :draft true
               :maintainerCanModify true})
-(def pullrequest-id (create-pull-request token options))
+(def new-pr-url (create-pull-request token options))
 ```
 The `draft` and `maintainerCanModify` options default to true.
 
@@ -24,17 +27,26 @@ The `draft` and `maintainerCanModify` options default to true.
 (def updated {:title "A new title"
               :body "A new body"
               :maintainerCanModify false})
-(update-pull-request token "https://github.com/eamonnsullivan/github-pr-lib/pull/3" updated)
+(update-pull-request token new-pr-url updated)
 ```
 ### Mark a pull request as ready for review
 ```
-(mark-ready-for-review token "https://github.com/eamonnsullivan/github-pr-lib/pull/3")
+(mark-ready-for-review token new-pr-url)
 ```
 ### Comment on a pull request
-TBD
+```
+(add-pull-request-comment token new-pr-url "Another comment.")
+```
 ### Close a pull request
-TBD
+```
+(close-pull-request token new-pr-url)
+```
+### Reopen a pull request
+```
+(reopen-pull-request token new-pr-url)
+```
 ### Merge a pull request
+TBD
 
 Run the project's tests (they'll fail until you edit them):
 
