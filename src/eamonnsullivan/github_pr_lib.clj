@@ -13,7 +13,7 @@
   }")
 
 (def create-pull-request-mutation "mutation
-($title: String!, $body: String!, $repositoryId: ID!, $base: String!, $branch: String!, $draft: Boolean!, $maintainerCanModify: Boolean) {
+($title: String!, $body: String, $repositoryId: ID!, $base: String!, $branch: String!, $draft: Boolean!, $maintainerCanModify: Boolean) {
   createPullRequest(input: {
     title: $title,
     body: $body,
