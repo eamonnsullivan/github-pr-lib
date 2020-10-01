@@ -13,7 +13,7 @@
   }")
 
 (def create-pull-request-mutation "mutation
-($title: String!, $body: String!, $repositoryId: ID!, $base: String!, $branch: String!, $draft: Boolean!, $maintainerCanModify: Boolean) {
+($title: String!, $body: String, $repositoryId: ID!, $base: String!, $branch: String!, $draft: Boolean!, $maintainerCanModify: Boolean) {
   createPullRequest(input: {
     title: $title,
     body: $body,
@@ -205,7 +205,12 @@
                          :maintainerCanModify true})
 
 (defn create-pull-request
-  [access-token pull-request]
+  ([access-token url pull-request]
+   (let [repo (parse-repo url)]
+     (if repo
+       (create-pull-request access-token (merge pull-request repo))
+       (throw (ex-info (format "Unable to find Github repo at %s" url) repo)))))
+  ([access-token pull-request]
   (let [{owner :owner
          repo-name :name
          title :title
@@ -224,7 +229,7 @@
                    :maintainerCanModify maintainerCanModify}]
     (when repo-id
       (let [body (make-graphql-post access-token create-pull-request-mutation variables)]
-        (-> body :data :createPullRequest :pullRequest :permalink)))))
+        (-> body :data :createPullRequest :pullRequest :permalink))))))
 
 (defn update-pull-request
   [access-token pull-request-url updated]

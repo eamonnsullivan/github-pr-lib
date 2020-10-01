@@ -10,15 +10,13 @@ A small, very simple library for opening, closing, approving and commenting on p
 
 ### Create a new pull request
 ```
-(def options {:owner "eamonnsullivan"
-              :name "github-pr-lib"
-              :title "A title for the pull request"
+(def options {:title "A title for the pull request"
               :body "The body of the pull request"
               :base "main-branch-name"
               :branch "your-branch-name"
               :draft true
               :maintainerCanModify true})
-(def new-pr-url (create-pull-request token options))
+(def new-pr-url (create-pull-request token "https://github.com/eamonnsullivan/github-pr-lib" options))
 ```
 The `draft` and `maintainerCanModify` options default to true.
 
