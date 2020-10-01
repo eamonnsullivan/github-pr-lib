@@ -53,7 +53,7 @@
 (deftest test-create-pull-request
   (with-redefs [sut/http-post (make-fake-post repo-id-response-success create-pr-response-success nil nil)]
     (testing "Creates a pull request and returns the id"
-      (is (= "MDExOlB1bGxSZXF1ZXN0NDkxMDgxOTQw"
+      (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/1"
              (sut/create-pull-request "secret-token" {:owner "owner"
                                                       :name "repo-name"
                                                       :title "some title"
@@ -154,9 +154,9 @@
   (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body update-pr-success})]
     (testing "updates a pull request"
-      (is (= "MDExOlB1bGxSZXF1ZXN0NDkzNzMxNzI2" (sut/update-pull-request "secret"
-                                                                         "https://github.com/eamonnsullivan/github-pr-lib/pull/3"
-                                                                         {:title "A new title" :body "A new body"})))))
+      (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/3" (sut/update-pull-request "secret"
+                                                                                               "https://github.com/eamonnsullivan/github-pr-lib/pull/3"
+                                                                                               {:title "A new title" :body "A new body"})))))
   (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body update-pr-failure})]
     (testing "Throws exception on update error"
@@ -168,8 +168,8 @@
   (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body mark-ready-success})]
     (testing "marks pull request as ready for review"
-      (is (= "MDExOlB1bGxSZXF1ZXN0NDkzNzMxNzI2" (sut/mark-ready-for-review "secret"
-                                                                           "https://github.com/eamonnsullivan/github-pr-lib/pull/3")))))
+      (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/3" (sut/mark-ready-for-review "secret"
+                                                                                                 "https://github.com/eamonnsullivan/github-pr-lib/pull/3")))))
   (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body mark-ready-failure})]
     (testing "Throws exception on error"

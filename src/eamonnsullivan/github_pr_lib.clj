@@ -168,7 +168,7 @@
             errors (:errors body)]
         (if errors
           (throw (ex-info (:message (first errors)) response))
-          (-> (json/read-str (response :body) :key-fn keyword) :data :createPullRequest :pullRequest :id))))))
+          (-> (json/read-str (response :body) :key-fn keyword) :data :createPullRequest :pullRequest :permalink))))))
 
 (defn update-pull-request
   [access-token pull-request-url updated]
@@ -185,7 +185,7 @@
             errors (:errors body)]
         (if errors
           (throw (ex-info (:message (first errors)) response))
-          (-> body  :data :updatePullRequest :pullRequest :id))))))
+          (-> body  :data :updatePullRequest :pullRequest :permalink))))))
 
 (defn mark-ready-for-review
   [access-token pull-request-url]
@@ -198,4 +198,4 @@
             errors (:errors body)]
         (if errors
           (throw (ex-info (:message (first errors)) response))
-          (-> body :data :markPullRequestReadyForReview :pullRequest :id))))))
+          (-> body :data :markPullRequestReadyForReview :pullRequest :permalink))))))
