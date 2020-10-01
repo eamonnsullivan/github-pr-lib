@@ -35,10 +35,16 @@ The `draft` and `maintainerCanModify` options default to true.
 ```
 ### Comment on a pull request
 ```
-(add-pr-comment token new-pr-url "Another comment.")
+(add-pull-request-comment token new-pr-url "Another comment.")
 ```
 ### Close a pull request
-TBD
+```
+(close-pull-request token new-pr-url)
+```
+### Reopen a pull request
+```
+(reopen-pull-request token new-pr-url)
+```
 ### Merge a pull request
 TBD
 

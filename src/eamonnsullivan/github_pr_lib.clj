@@ -77,6 +77,24 @@
   }
 }")
 
+(def close-pull-request-mutation "mutation ($pullRequestId: ID!) {
+  closePullRequest(input: {pullRequestId: $pullRequestId}) {
+    pullRequest {
+      id
+      permalink
+    }
+  }
+}")
+
+(def reopen-pull-request-mutation "mutation ($pullRequestId: ID!) {
+  reopenPullRequest(input: {pullRequestId: $pullRequestId}) {
+    pullRequest {
+      id
+      permalink
+    }
+  }
+}")
+
 (defn request-opts
   [access-token]
   {:ssl? true :headers {"Authorization" (str "bearer " access-token)}})
@@ -84,6 +102,16 @@
 (defn http-post
   [url payload opts]
   (client/post url (merge {:content-type :json :body payload} opts)))
+
+(defn make-graphql-post
+  [access-token query variables]
+  (let [payload (json/write-str {:query query :variables variables})
+        response (http-post github-url payload (request-opts access-token))
+        body (json/read-str (response :body) :key-fn keyword)
+        errors (:errors body)]
+    (if errors
+      (throw (ex-info (:message (first errors)) response))
+      body)))
 
 (defn parse-repo
   [url]
@@ -170,15 +198,10 @@
                    :base base-branch
                    :branch merging-branch
                    :draft draft
-                   :maintainerCanModify maintainerCanModify}
-        payload (json/write-str {:query create-pull-request-mutation :variables variables})]
+                   :maintainerCanModify maintainerCanModify}]
     (when repo-id
-      (let [response (http-post github-url payload (request-opts access-token))
-            body (json/read-str (response :body) :key-fn keyword)
-            errors (:errors body)]
-        (if errors
-          (throw (ex-info (:message (first errors)) response))
-          (-> (json/read-str (response :body) :key-fn keyword) :data :createPullRequest :pullRequest :permalink))))))
+      (let [body (make-graphql-post access-token create-pull-request-mutation variables)]
+        (-> body :data :createPullRequest :pullRequest :permalink)))))
 
 (defn update-pull-request
   [access-token pull-request-url updated]
@@ -189,36 +212,37 @@
       (let [variables {:pullRequestId pr-id
                        :title title
                        :body body}
-            payload (json/write-str {:query update-pull-request-mutation :variables variables})
-            response (http-post github-url payload (request-opts access-token))
-            body (json/read-str (response :body) :key-fn keyword)
-            errors (:errors body)]
-        (if errors
-          (throw (ex-info (:message (first errors)) response))
-          (-> body  :data :updatePullRequest :pullRequest :permalink))))))
+            body (make-graphql-post access-token update-pull-request-mutation variables)]
+        (-> body  :data :updatePullRequest :pullRequest :permalink)))))
 
 (defn mark-ready-for-review
   [access-token pull-request-url]
   (let [pr-id (get-open-pr-id access-token pull-request-url)]
     (when pr-id
       (let [variables {:pullRequestId pr-id}
-            payload (json/write-str {:query mark-ready-for-review-mutation :variables variables})
-            response (http-post github-url payload (request-opts access-token))
-            body (json/read-str (response :body) :key-fn keyword)
-            errors (:errors body)]
-        (if errors
-          (throw (ex-info (:message (first errors)) response))
-          (-> body :data :markPullRequestReadyForReview :pullRequest :permalink))))))
+            body (make-graphql-post access-token mark-ready-for-review-mutation variables)]
+        (-> body :data :markPullRequestReadyForReview :pullRequest :permalink)))))
 
-(defn add-pr-comment
+(defn add-pull-request-comment
   [access-token pull-request-url comment-body]
   (let [pr-id (get-open-pr-id access-token pull-request-url)]
     (when pr-id
       (let [variables {:pullRequestId pr-id :body comment-body}
-            payload (json/write-str {:query add-comment-mutation :variables variables})
-            response (http-post github-url payload (request-opts access-token))
-            body (json/read-str (response :body) :key-fn keyword)
-            errors (:errors body)]
-        (if errors
-          (throw (ex-info (:message (first errors)) response))
-          (-> body :data :addComment :commentEdge :node :url))))))
+            body (make-graphql-post access-token add-comment-mutation variables)]
+        (-> body :data :addComment :commentEdge :node :url)))))
+
+(defn close-pull-request
+  [access-token pull-request-url]
+  (let [pr-id (get-open-pr-id access-token pull-request-url)]
+    (when pr-id
+      (let [variables {:pullRequestId pr-id}
+            body (make-graphql-post access-token close-pull-request-mutation variables)]
+        (-> body :data :closePullRequest :pullRequest :permalink)))))
+
+(defn reopen-pull-request
+  [access-token pull-request-url]
+  (let [pr-id (get-open-pr-id access-token pull-request-url)]
+    (when pr-id
+      (let [variables {:pullRequestId pr-id}
+            body (make-graphql-post access-token reopen-pull-request-mutation variables)]
+        (-> body :data :reopenPullRequest :pullRequest :permalink)))))
