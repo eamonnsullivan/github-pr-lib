@@ -237,7 +237,7 @@
 
 (deftest test-merge-pull-request
   (with-redefs [sut/get-open-pr-id (fn [_ _] "some id")
-                sut/get-pull-request-info (fn [_ _] {:baseRefOid "commit-id"})
+                sut/get-pull-request-info (fn [_ _] {:headRefOid "commit-id"})
                 sut/http-post (fn [_ _ _] {:body merge-pull-request-success})]
     (testing "merges a pull request"
       (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4" (sut/merge-pull-request "secret"
@@ -245,7 +245,7 @@
                                                                                               {:title "a commit" :body "some description"
                                                                                                :author-email "someone@somewhere.com"})))))
   (with-redefs [sut/get-open-pr-id (fn [_ _] "some id")
-                sut/get-pull-request-info (fn [_ _] {:baseRefOid "commit-id"})
+                sut/get-pull-request-info (fn [_ _] {:headRefOid "commit-id"})
                 sut/http-post (fn [_ _ _] {:body merge-pull-request-failure})]
     (testing "Throws exception on error"
       (is (thrown-with-msg? RuntimeException #"Could not resolve to a node with the global id of 'invalid'"
@@ -263,7 +263,7 @@
                                                     {:title "a commit" :body "some description"
                                                      :author-email "someone@somewhere.com"})))))
   (with-redefs [sut/get-open-pr-id (fn [_ _] "some id")
-                sut/get-pull-request-info (fn [_ _] {:baseRefOid "commit-id"})
+                sut/get-pull-request-info (fn [_ _] {:headRefOid "commit-id"})
                 sut/http-post (make-fake-post nil merge-pull-request-success nil assert-merge-payload-defaults)]
     (testing "merges a pull request"
       (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4" (sut/merge-pull-request "secret"

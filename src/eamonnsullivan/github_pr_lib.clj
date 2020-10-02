@@ -131,6 +131,7 @@
     ... on PullRequest {
       id
       baseRefOid
+      headRefOid
       permalink
     }
   }
@@ -416,7 +417,7 @@
   All of these fields are optional."
   [access-token pull-request-url merge-options]
   (let [prinfo (get-pull-request-info access-token pull-request-url)
-        expected-head-ref (:baseRefOid prinfo)]
+        expected-head-ref (:headRefOid prinfo)]
     (if expected-head-ref
       (let [opts (merge {:mergeMethod "SQUASH"} merge-options {:expectedHeadRef expected-head-ref})]
         (-> (modify-pull-request access-token pull-request-url merge-pull-request-mutation opts)
