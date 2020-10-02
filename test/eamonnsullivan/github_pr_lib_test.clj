@@ -270,3 +270,7 @@
                                                                                               "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
                                                                                               {:title "a commit" :body "some description"
                                                                                                :author-email "someone@somewhere.com"}))))))
+
+(deftest test-pull-request-checks
+  (testing "a purposely failing test"
+    (is (= 1 0))))
