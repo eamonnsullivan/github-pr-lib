@@ -4,7 +4,7 @@
             [clojure.data.json :as json]))
 
 (def github-url "https://api.github.com/graphql")
-(def ^:dynamic *search-page-size* 10)
+(def ^:dynamic *search-page-size* 50)
 
 (def get-repo-id-query "query($owner: String!, $name: String!) {
     repository(owner:$owner, name:$name) {
@@ -113,20 +113,22 @@
 }")
 
 (defn request-opts
-  "Add the access-token to the request options."
+  "Add the authorization header to the http request options."
   [access-token]
   {:ssl? true :headers {"Authorization" (str "bearer " access-token)}})
 
 (defn http-post
-  "Make a post request to the `url` with the provided `payload` and `opts`."
+  "Make a POST request to a url with body payload and request options."
   [url payload opts]
   (client/post url (merge {:content-type :json :body payload} opts)))
 
 (defn make-graphql-post
-  "Make a graphql request to Github using the provided query (which can
-  be a mutation) and variables."
-  [access-token query variables]
-  (let [payload (json/write-str {:query query :variables variables})
+  "Make a GraphQL request to Github using the provided query/mutation
+  and variables. If there are any errors, throw a RuntimeException,
+  with the message set to the first error and the rest of the response
+  as the cause/additional information."
+  [access-token graphql variables]
+  (let [payload (json/write-str {:query graphql :variables variables})
         response (http-post github-url payload (request-opts access-token))
         body (json/read-str (response :body) :key-fn keyword)
         errors (:errors body)]
@@ -135,7 +137,8 @@
       body)))
 
 (defn parse-repo
-  "Get the :owner and :name of a repository from a full or partial URL."
+  "Parse a repository url (a full url or just the owner/name part) and
+  return a map with :owner and :name keys."
   [url]
   (let [matches (re-matches #"(https://github.com/)?([^/]*)/([^/]*).*$" url)
         [_ _ owner name] matches]
@@ -153,7 +156,7 @@
       nil)))
 
 (defn get-repo-id
-  "Get the unique ID value for a repository. Throws on error."
+  "Get the unique ID value for a repository."
   ([access-token url]
    (let [repo (parse-repo url)
          owner (:owner repo)
@@ -180,8 +183,8 @@
 
 (defn get-pull-request-id
   "Find the unique ID of a pull request on the repository at the
-  provided `url`. Set `must-be-open?` to true to filter the pull
-  requests to those with a status of open. Returns nil of none are found."
+  provided url. Set must-be-open? to true to filter the pull requests
+  to those with a status of open. Returns nil if not found."
   [access-token url must-be-open?]
   (let [repo (parse-repo url)
         prnum (pull-request-number url)
@@ -207,7 +210,7 @@
    (get-pull-request-id access-token pull-request-url true)))
 
 (defn modify-pull-request
-  "Modify a pull request at the `url` with the provided `mutation`."
+  "Modify a pull request at the url with the provided mutation."
   ([access-token url mutation]
    (modify-pull-request access-token url mutation nil))
   ([access-token url mutation variables]
@@ -233,7 +236,7 @@
   request. Keys: :title, :base (the base branch), :branch (the branch
   you want to merge) and (if a URL isn't provided) the :owner (or
   organisation) and :name of the repo. Optional keys
-  include :draft (default: false), indicating whether the pull request
+  include :draft (default: true), indicating whether the pull request
   is ready for review and :maintainerCanModify (default: true)
   indicating whether the repo owner is allowed to modify the pull
   request."
@@ -302,7 +305,6 @@
       :markPullRequestReadyForReview
       :pullRequest
       :permalink))
-
 
 (defn add-pull-request-comment
   "Add a top-level comment to a pull request.
