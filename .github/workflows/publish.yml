@@ -1,0 +1,31 @@
+name: Deploy version
+
+on:
+  push:
+    branches:
+    - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Master
+      uses: actions/checkout@master
+    - name: Prepare Java
+      uses: actions/setup-java@v1
+      with:
+        java-version: 1.8
+    - name: Prepare Clojure
+      uses: DeLaGuardo/setup-clojure@master
+      with:
+        cli: '1.10.1.469'
+    - name: test
+      run: clojure -A:test:runner -M:runner
+    - name: build
+      run: clojure -Spom
+      run: clojure -A:jar -M:jar
+    - name: deploy
+      run: clojure -A:deploy -M:deploy
+      env:
+        CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
+        CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
