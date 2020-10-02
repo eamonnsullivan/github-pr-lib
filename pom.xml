@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>eamonnsullivan</groupId>
   <artifactId>github-pr-lib</artifactId>
-  <version>0.0.3</version>
+  <version>0.0.4</version>
   <name>github-pr-lib</name>
   <description>Small library for creating and modifying Github pull requests.</description>
   <url>https://github.com/eamonnsullivan/github-pr-lib</url>
