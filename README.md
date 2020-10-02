@@ -65,7 +65,7 @@ To run the project's tests:
 
 To build a deployable jar of this library:
 
-    $ clojure -S:pom               # to update any dependencies
+    $ clojure -Spom               # to update any dependencies
     $ clojure -A:jar -M:jar
 
 To install the library locally:
