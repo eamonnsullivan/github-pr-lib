@@ -228,21 +228,45 @@
                             (sut/reopen-pull-request "secret"
                                                      "https://github.com/eamonnsullivan/github-pr-lib/pull/4"))))))
 
+(defn assert-merge-payload-defaults
+  [payload]
+  (testing "the mergeMethod and expectedHeadRef are supplied"
+    (let [variables (:variables (json/read-str payload :key-fn keyword))]
+      (is (not= nil (:mergeMethod variables)))
+      (is (not= nil (:expectedHeadRef variables))))))
+
 (deftest test-merge-pull-request
   (with-redefs [sut/get-open-pr-id (fn [_ _] "some id")
+                sut/get-pull-request-info (fn [_ _] {:baseRefOid "commit-id"})
                 sut/http-post (fn [_ _ _] {:body merge-pull-request-success})]
     (testing "merges a pull request"
       (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4" (sut/merge-pull-request "secret"
                                                                                               "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
-                                                                                              {:title "a commit" :body "some description" :merge-method "SQUASH"
-                                                                                               :author-email "someone@somewhere.com"
-                                                                                               :expected-head-ref "c61a00376ff448c43c38a6443f932f7187e027ce"})))))
+                                                                                              {:title "a commit" :body "some description"
+                                                                                               :author-email "someone@somewhere.com"})))))
   (with-redefs [sut/get-open-pr-id (fn [_ _] "some id")
+                sut/get-pull-request-info (fn [_ _] {:baseRefOid "commit-id"})
                 sut/http-post (fn [_ _ _] {:body merge-pull-request-failure})]
     (testing "Throws exception on error"
       (is (thrown-with-msg? RuntimeException #"Could not resolve to a node with the global id of 'invalid'"
                             (sut/merge-pull-request "secret"
                                                     "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
-                                                    {:title "a commit" :body "some description" :merge-method "SQUASH"
-                                                     :author-email "someone@somewhere.com"
-                                                     :expected-head-ref "c61a00376ff448c43c38a6443f932f7187e027ce"}))))))
+                                                    {:title "a commit" :body "some description"
+                                                     :author-email "someone@somewhere.com"})))))
+  (with-redefs [sut/get-open-pr-id (fn [_ _] "some id")
+                sut/get-pull-request-info (fn [_ _] nil)
+                sut/http-post (fn [_ _ _] {:body merge-pull-request-failure})]
+    (testing "Throws exception if the pull request can't be found"
+      (is (thrown-with-msg? RuntimeException #"Pull request not found"
+                            (sut/merge-pull-request "secret"
+                                                    "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
+                                                    {:title "a commit" :body "some description"
+                                                     :author-email "someone@somewhere.com"})))))
+  (with-redefs [sut/get-open-pr-id (fn [_ _] "some id")
+                sut/get-pull-request-info (fn [_ _] {:baseRefOid "commit-id"})
+                sut/http-post (make-fake-post nil merge-pull-request-success nil assert-merge-payload-defaults)]
+    (testing "merges a pull request"
+      (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4" (sut/merge-pull-request "secret"
+                                                                                              "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
+                                                                                              {:title "a commit" :body "some description"
+                                                                                               :author-email "someone@somewhere.com"}))))))

@@ -9,7 +9,7 @@ You will need a Github access token with `repo` permissions. This is one way to 
 (def token (System/getenv "GITHUB_ACCESS_TOKEN"))
 ```
 
-All of these methods return the permalink of the new or updated pull request, e.g., `https://github.com/eamonnsullivan/github-pr-lib/pulls/1`.
+All of these methods return the permalink of the new or updated pull request or comment, e.g., `https://github.com/eamonnsullivan/github-pr-lib/pulls/1`.
 
 ### Create a new pull request
 ```
@@ -48,14 +48,13 @@ The `title`, `base` and `branch` are mandatory. You can omit the `body`, and the
 ```
 ### Merge a pull request
 ```
-;; All of these fields are optional. The merge-method will default to "SQUASH". If you
-;; omit a head reference, no check is performed and the merge just goes ahead
-;; if there isn't a conflict.
+;; All of these fields are optional. The merge-method will default to "SQUASH".
+;; The merge will fail if the pull-request's URL can't be found, if the pull
+;; request's head reference is out-of-date or if there are conflicts.
 (def merge-options {:title "A title or headline for the commit."
                     :body "The commit message body."
                     :mergeMethod "MERGE" or "REBASE" or "SQUASH"
-                    :authorEmail "someone@somwhere.com"
-                    :expectedHeadRef "Commit id that the pull request head ref must match before merging is allowed."})
+                    :authorEmail "someone@somwhere.com"})
 (merge-pull-request token new-pr-url merge-options)
 ```
 ## Development Notes

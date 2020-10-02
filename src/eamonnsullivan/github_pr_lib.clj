@@ -126,6 +126,16 @@
   }
 }")
 
+(def pull-request-query "query($pullRequestId: ID!) {
+  node(id: $pullRequestId) {
+    ... on PullRequest {
+      id
+      baseRefOid
+      permalink
+    }
+  }
+}")
+
 (defn request-opts
   "Add the authorization header to the http request options."
   [access-token]
@@ -223,6 +233,14 @@
   ([access-token pull-request-url]
    (get-pull-request-id access-token pull-request-url true)))
 
+(defn get-pull-request-info
+  "Find some info about a pull request."
+  [access-token pull-request-url]
+  (let [pr-id (or (get-open-pr-id access-token pull-request-url)
+                  (get-pull-request-id access-token pull-request-url false))]
+    (when pr-id
+      (make-graphql-post access-token pull-request-query {:pullRequestId pr-id}))))
+
 (defn modify-pull-request
   "Modify a pull request at the url with the provided mutation."
   ([access-token url mutation]
@@ -260,28 +278,28 @@
        (create-pull-request access-token (merge pull-request repo))
        (throw (ex-info (format "Unable to find Github repo at %s" url) repo)))))
   ([access-token pull-request]
-  (let [{owner :owner
-         repo-name :name
-         title :title
-         body :body
-         base-branch :base
-         merging-branch :branch
-         draft :draft
-         maintainerCanModify :maintainerCanModify} (merge create-pr-defaults pull-request)
-        repo-id (get-repo-id access-token owner repo-name)
-        variables {:repositoryId repo-id
-                   :title title
-                   :body body
-                   :base base-branch
-                   :branch merging-branch
-                   :draft draft
-                   :maintainerCanModify maintainerCanModify}]
-    (when repo-id
-      (-> (make-graphql-post access-token create-pull-request-mutation variables)
-          :data
-          :createPullRequest
-          :pullRequest
-          :permalink)))))
+   (let [{owner :owner
+          repo-name :name
+          title :title
+          body :body
+          base-branch :base
+          merging-branch :branch
+          draft :draft
+          maintainerCanModify :maintainerCanModify} (merge create-pr-defaults pull-request)
+         repo-id (get-repo-id access-token owner repo-name)
+         variables {:repositoryId repo-id
+                    :title title
+                    :body body
+                    :base base-branch
+                    :branch merging-branch
+                    :draft draft
+                    :maintainerCanModify maintainerCanModify}]
+     (when repo-id
+       (-> (make-graphql-post access-token create-pull-request-mutation variables)
+           :data
+           :createPullRequest
+           :pullRequest
+           :permalink)))))
 
 (defn update-pull-request
   "Update an existing pull request.
@@ -391,14 +409,17 @@
   * merge-options -- a map with keys that can include :title (the
   headline of the commit), :body (any body description of the
   commit), :mergeMethod (default \"SQUASH\", but can also be
-  \"MERGE\" or \"REBASE\"), :authorEmail and :expectedHeadRef. If
-  the last is provided, the main branch's head commit must match this
-  ID or the merge will be aborted.
+  \"MERGE\" or \"REBASE\") and :authorEmail.
 
   All of these fields are optional."
   [access-token pull-request-url merge-options]
-  (-> (modify-pull-request access-token pull-request-url merge-pull-request-mutation merge-options)
-      :data
-      :mergePullRequest
-      :pullRequest
-      :permalink))
+  (let [prinfo (get-pull-request-info access-token pull-request-url)
+        expected-head-ref (:baseRefOid prinfo)]
+    (if expected-head-ref
+      (let [opts (merge {:mergeMethod "SQUASH"} merge-options {:expectedHeadRef expected-head-ref})]
+        (-> (modify-pull-request access-token pull-request-url merge-pull-request-mutation opts)
+            :data
+            :mergePullRequest
+            :pullRequest
+            :permalink))
+      (throw (ex-info "Pull request not found" {:pullRequestUrl pull-request-url})))))
