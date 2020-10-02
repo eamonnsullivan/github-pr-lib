@@ -4,21 +4,24 @@ A small, very simple library for opening, closing, approving and commenting on p
 
 ## Usage
 
+You will need a Github access token with `repo` permissions. This is one way to provide that value:
 ```
 (def token (System/getenv "GITHUB_ACCESS_TOKEN"))
 ```
+
+All of these methods return the permalink of the new or updated pull request, e.g., `https://github.com/eamonnsullivan/github-pr-lib/pulls/1`.
 
 ### Create a new pull request
 ```
 (def options {:title "A title for the pull request"
               :body "The body of the pull request"
-              :base "main-branch-name"
-              :branch "your-branch-name"
+              :base "main or master, usually"
+              :branch "the name of the branch you want to merge"
               :draft true
               :maintainerCanModify true})
 (def new-pr-url (create-pull-request token "https://github.com/eamonnsullivan/github-pr-lib" options))
 ```
-The `draft` and `maintainerCanModify` options default to true.
+The `title`, `base` and `branch` are mandatory. You can omit the `body`, and the `draft` and `maintainerCanModify` options default to true.
 
 ### Update a pull request
 ```
@@ -43,21 +46,34 @@ The `draft` and `maintainerCanModify` options default to true.
 ```
 (reopen-pull-request token new-pr-url)
 ```
+### Merge a pull request
+```
+;; All of these fields are optional. The merge-method will default to "SQUASH". If you
+;; omit a head reference, no check is performed and the merge just goes ahead
+;; if there isn't a conflict.
+(def merge-options {:title "A title or headline for the commit."
+                    :body "The commit message body."
+                    :mergeMethod "MERGE" or "REBASE" or "SQUASH"
+                    :authorEmail "someone@somwhere.com"
+                    :expectedHeadRef "Commit id that the pull request head ref must match before merging is allowed."})
+(merge-pull-request token new-pr-url merge-options)
+```
+## Development Notes
 
-Run the project's tests:
+To run the project's tests:
 
     $ clojure -A:test:runner -M:runner
 
-Build a deployable jar of this library:
+To build a deployable jar of this library:
 
     $ clojure -S:pom               # to update any dependencies
     $ clojure -A:jar -M:jar
 
-Install it locally:
+To install the library locally:
 
     $ clojure -A:install -M:install
 
-Deploy it to Clojars -- needs `CLOJARS_USERNAME` and `CLOJARS_PASSWORD` environment variables:
+To deploy it to Clojars -- needs `CLOJARS_USERNAME` and `CLOJARS_PASSWORD` environment variables or Maven settings:
 
     $ clojure -A:deploy -M:deploy
 

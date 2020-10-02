@@ -20,6 +20,8 @@
 (def close-pull-request-failure (slurp "./test/eamonnsullivan/close-pull-request-failure.json"))
 (def reopen-pull-request-success (slurp "./test/eamonnsullivan/reopen-pull-request-success.json"))
 (def reopen-pull-request-failure (slurp "./test/eamonnsullivan/reopen-pull-request-failure.json"))
+(def merge-pull-request-success (slurp "./test/eamonnsullivan/merge-pull-request-success.json"))
+(def merge-pull-request-failure (slurp "./test/eamonnsullivan/merge-pull-request-failure.json"))
 
 (deftest test-get-repo-id
   (with-redefs [sut/http-post (fn [_ _ _] {:body repo-id-response-success})]
@@ -188,15 +190,15 @@
                 sut/http-post (fn [_ _ _] {:body add-comment-success})]
     (testing "adds comment to pull request"
       (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4#issuecomment-702076146" (sut/add-pull-request-comment "secret"
-                                                                                                                 "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
-                                                                                                                 "This is a comment.")))))
+                                                                                                                           "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
+                                                                                                                           "This is a comment.")))))
   (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body add-comment-failure})]
     (testing "Throws exception on error"
       (is (thrown-with-msg? RuntimeException #"Could not resolve to a node with the global id of 'invalid'"
                             (sut/add-pull-request-comment "secret"
-                                                "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
-                                                "This is a comment."))))))
+                                                          "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
+                                                          "This is a comment."))))))
 
 (deftest test-close-pull-request
   (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
@@ -212,14 +214,35 @@
                                                     "https://github.com/eamonnsullivan/github-pr-lib/pull/4"))))))
 
 (deftest test-reopen-pull-request
-  (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
+  (with-redefs [sut/get-open-pr-id (fn [_ _] nil)
+                sut/get-pull-request-id (fn [_ _ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body reopen-pull-request-success})]
     (testing "reopens a pull request"
       (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4" (sut/reopen-pull-request "secret"
                                                                                                "https://github.com/eamonnsullivan/github-pr-lib/pull/4")))))
-  (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
+  (with-redefs [sut/get-open-pr-id (fn [_ _] nil)
+                sut/get-pull-request-id (fn [_ _ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body reopen-pull-request-failure})]
     (testing "Throws exception on error"
       (is (thrown-with-msg? RuntimeException #"Could not resolve to a node with the global id of 'invalid'"
                             (sut/reopen-pull-request "secret"
                                                      "https://github.com/eamonnsullivan/github-pr-lib/pull/4"))))))
+
+(deftest test-merge-pull-request
+  (with-redefs [sut/get-open-pr-id (fn [_ _] "some id")
+                sut/http-post (fn [_ _ _] {:body merge-pull-request-success})]
+    (testing "merges a pull request"
+      (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4" (sut/merge-pull-request "secret"
+                                                                                              "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
+                                                                                              {:title "a commit" :body "some description" :merge-method "SQUASH"
+                                                                                               :author-email "someone@somewhere.com"
+                                                                                               :expected-head-ref "c61a00376ff448c43c38a6443f932f7187e027ce"})))))
+  (with-redefs [sut/get-open-pr-id (fn [_ _] "some id")
+                sut/http-post (fn [_ _ _] {:body merge-pull-request-failure})]
+    (testing "Throws exception on error"
+      (is (thrown-with-msg? RuntimeException #"Could not resolve to a node with the global id of 'invalid'"
+                            (sut/merge-pull-request "secret"
+                                                    "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
+                                                    {:title "a commit" :body "some description" :merge-method "SQUASH"
+                                                     :author-email "someone@somewhere.com"
+                                                     :expected-head-ref "c61a00376ff448c43c38a6443f932f7187e027ce"}))))))

@@ -112,6 +112,20 @@
   }
 }")
 
+(def merge-pull-request-mutation "mutation ($pullRequestId: ID!, $title: String, $body: String, $mergeMethod: PullRequestMergeMethod, $authorEmail: String, $expectedHeadRef: GitObjectID ) {
+  mergePullRequest(input: {pullRequestId: $pullRequestId,
+                           commitHeadline: $title,
+                           commitBody: $body,
+                           mergeMethod: $mergeMethod,
+                           authorEmail: $authorEmail,
+                           expectedHeadOid: $expectedHeadRef}) {
+    pullRequest {
+      id
+      permalink
+    }
+  }
+}")
+
 (defn request-opts
   "Add the authorization header to the http request options."
   [access-token]
@@ -360,5 +374,31 @@
   (-> (modify-pull-request access-token pull-request-url reopen-pull-request-mutation)
       :data
       :reopenPullRequest
+      :pullRequest
+      :permalink))
+
+(defn merge-pull-request
+  "Merge a pull request.
+
+  Arguments:
+  * access-token -- the Github access token to use. Must have repo
+  permissions.
+
+  * pull-request-url -- the full (e.g.,
+  https://github.com/owner/name/pulls/1) or
+  partial (owner/name/pulls/1) URL of the pull request.
+
+  * merge-options -- a map with keys that can include :title (the
+  headline of the commit), :body (any body description of the
+  commit), :mergeMethod (default \"SQUASH\", but can also be
+  \"MERGE\" or \"REBASE\"), :authorEmail and :expectedHeadRef. If
+  the last is provided, the main branch's head commit must match this
+  ID or the merge will be aborted.
+
+  All of these fields are optional."
+  [access-token pull-request-url merge-options]
+  (-> (modify-pull-request access-token pull-request-url merge-pull-request-mutation merge-options)
+      :data
+      :mergePullRequest
       :pullRequest
       :permalink))
