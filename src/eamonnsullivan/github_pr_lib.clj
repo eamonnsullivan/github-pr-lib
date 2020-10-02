@@ -239,7 +239,9 @@
   (let [pr-id (or (get-open-pr-id access-token pull-request-url)
                   (get-pull-request-id access-token pull-request-url false))]
     (when pr-id
-      (make-graphql-post access-token pull-request-query {:pullRequestId pr-id}))))
+      (-> (make-graphql-post access-token pull-request-query {:pullRequestId pr-id})
+          :data
+          :node))))
 
 (defn modify-pull-request
   "Modify a pull request at the url with the provided mutation."
