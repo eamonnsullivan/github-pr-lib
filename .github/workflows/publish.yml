@@ -21,8 +21,9 @@ jobs:
         cli: '1.10.1.469'
     - name: test
       run: clojure -A:test:runner -M:runner
-    - name: build
+    - name: pom
       run: clojure -Spom
+    - name: build
       run: clojure -A:jar -M:jar
     - name: deploy
       run: clojure -A:deploy -M:deploy
