@@ -1,8 +1,8 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
-## [0.0.7]-2020-10-03
-- Minor refactoring
+## [0.0.8]-2020-10-03
+-fix error in build.
 
 ## [0.0.6]-2020-10-03
 - Implement editing of issue comments
