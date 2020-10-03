@@ -43,6 +43,7 @@
   </dependencies>
   <build>
     <sourceDirectory>src</sourceDirectory>
+    <sourceDirectory>resources/graphql</sourceDirectory>
   </build>
   <repositories>
     <repository>
