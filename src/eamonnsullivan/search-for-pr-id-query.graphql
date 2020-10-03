@@ -1,0 +1,34 @@
+query SearchForPR (
+  $owner: String!,
+  $name: String!,
+  $states: [PullRequestState!] = [OPEN],
+  $first: Int!,
+  $after: String,
+  $commentFirst: Int!,
+  $commentAfter: String)  {
+  repository(owner:$owner, name:$name) {
+    id
+    pullRequests(first: $first, after: $after, states: $states) {
+      nodes {
+        id
+        url
+        state
+        comments(first: $commentFirst, after: $commentAfter) {
+          nodes {
+            id
+            url
+            author {
+              login
+              url
+            }
+            body
+          }
+        }
+      }
+      pageInfo {
+      	hasNextPage
+      	endCursor
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+query PullRequestQuery ($pullRequestId: ID!) {
+  node(id: $pullRequestId) {
+    ... on PullRequest {
+      id
+      baseRefOid
+      headRefOid
+      permalink
+    }
+  }
+}

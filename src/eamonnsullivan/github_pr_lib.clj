@@ -6,136 +6,18 @@
 (def github-url "https://api.github.com/graphql")
 (def ^:dynamic *search-page-size* 50)
 
-(def get-repo-id-query "query($owner: String!, $name: String!) {
-    repository(owner:$owner, name:$name) {
-      id
-    }
-  }")
-
-(def create-pull-request-mutation "mutation
-($title: String!, $body: String, $repositoryId: ID!, $base: String!, $branch: String!, $draft: Boolean!, $maintainerCanModify: Boolean) {
-  createPullRequest(input: {
-    title: $title,
-    body: $body,
-    repositoryId: $repositoryId,
-    baseRefName: $base,
-    headRefName: $branch,
-    draft: $draft,
-    maintainerCanModify: $maintainerCanModify
-  }) {
-    pullRequest {
-      id
-      permalink
-    }
-  }
-}")
-
-(def search-for-open-pr-id-query "query ($owner: String!, $name: String!, $first: Int!, $after: String)  {
-    repository(owner:$owner, name:$name) {
-      id
-      pullRequests(first: $first, after: $after, states:[OPEN]) {
-        nodes {
-          id
-          url
-        }
-        pageInfo {
-      	  hasNextPage
-      	  endCursor
-        }
-      }
-    }
-  }
-")
-
-(def search-for-pr-id-query "query ($owner: String!, $name: String!, $first: Int!, $after: String)  {
-    repository(owner:$owner, name:$name) {
-      id
-      pullRequests(first: $first, after: $after) {
-        nodes {
-          id
-          url
-        }
-        pageInfo {
-      	  hasNextPage
-      	  endCursor
-        }
-      }
-    }
-  }
-")
-
-(def update-pull-request-mutation "mutation ($pullRequestId: ID!, $title: String, $body: String) {
-  updatePullRequest(input: {pullRequestId: $pullRequestId,
-  title: $title,
-  body: $body}) {
-    pullRequest {
-      id
-      permalink
-    }
-  }
-}")
-
-(def mark-ready-for-review-mutation "mutation ($pullRequestId: ID!) {
-  markPullRequestReadyForReview(input: {pullRequestId: $pullRequestId}) {
-    pullRequest {
-      id
-      permalink
-    }
-  }
-}")
-
-(def add-comment-mutation "mutation ($pullRequestId: ID!, $body: String!) {
-  addComment(input: {subjectId: $pullRequestId, body: $body}) {
-    commentEdge {
-      node {
-        id
-      }
-    }
-  }
-}")
-
-(def close-pull-request-mutation "mutation ($pullRequestId: ID!) {
-  closePullRequest(input: {pullRequestId: $pullRequestId}) {
-    pullRequest {
-      id
-      permalink
-    }
-  }
-}")
-
-(def reopen-pull-request-mutation "mutation ($pullRequestId: ID!) {
-  reopenPullRequest(input: {pullRequestId: $pullRequestId}) {
-    pullRequest {
-      id
-      permalink
-    }
-  }
-}")
-
-(def merge-pull-request-mutation "mutation ($pullRequestId: ID!, $title: String, $body: String, $mergeMethod: PullRequestMergeMethod, $authorEmail: String, $expectedHeadRef: GitObjectID ) {
-  mergePullRequest(input: {pullRequestId: $pullRequestId,
-                           commitHeadline: $title,
-                           commitBody: $body,
-                           mergeMethod: $mergeMethod,
-                           authorEmail: $authorEmail,
-                           expectedHeadOid: $expectedHeadRef}) {
-    pullRequest {
-      id
-      permalink
-    }
-  }
-}")
-
-(def pull-request-query "query($pullRequestId: ID!) {
-  node(id: $pullRequestId) {
-    ... on PullRequest {
-      id
-      baseRefOid
-      headRefOid
-      permalink
-    }
-  }
-}")
+(def get-repo-id-query (slurp "./src/eamonnsullivan/get-repo-id-query.graphql"))
+(def create-pull-request-mutation (slurp "./src/eamonnsullivan/create-pull-request-mutation.graphql"))
+(def search-for-pr-id-query (slurp "./src/eamonnsullivan/search-for-pr-id-query.graphql"))
+(def update-pull-request-mutation (slurp "./src/eamonnsullivan/update-pull-request-mutation.graphql"))
+(def mark-ready-for-review-mutation (slurp "./src/eamonnsullivan/mark-ready-for-review-mutation.graphql"))
+(def add-comment-mutation (slurp "./src/eamonnsullivan/add-comment-mutation.graphql"))
+(def edit-comment-mutation (slurp "./src/eamonnsullivan/edit-comment-mutation.graphql"))
+(def close-pull-request-mutation (slurp "./src/eamonnsullivan/close-pull-request-mutation.graphql"))
+(def reopen-pull-request-mutation (slurp "./src/eamonnsullivan/reopen-pull-request-mutation.graphql"))
+(def merge-pull-request-mutation (slurp "./src/eamonnsullivan/merge-pull-request-mutation.graphql"))
+(def pull-request-query (slurp "./src/eamonnsullivan/pull-request-query.graphql"))
+(def search-for-issue-comment-id (slurp "./src/eamonnsullivan/search-for-issue-comment-id-query.graphql"))
 
 (defn request-opts
   "Add the authorization header to the http request options."
@@ -180,6 +62,19 @@
       (Integer/parseInt number)
       nil)))
 
+(defn parse-comment-url
+  "Get the full comment url and pull request url from an issue comment URL."
+  [comment-url]
+  (let [matches (re-matches #"(https://github.com/)?([^/]*)/([^/]*)/pull/([0-9]*)#(issuecomment-[0-9]*)" comment-url)
+        [_ _ owner name number comment] matches]
+    (if (and (not-empty owner)
+             (not-empty name)
+             (not-empty number)
+             (not-empty comment))
+      {:pullRequestUrl (format "https://github.com/%s/%s/pull/%s" owner name number)
+       :issueComment (format "#%s" comment)}
+      nil)))
+
 (defn get-repo-id
   "Get the unique ID value for a repository."
   ([access-token url]
@@ -196,15 +91,16 @@
          :repository
          :id))))
 
-(defn get-page-of-search-results
+(defn get-page-of-pull-requests
   "Get a page of pull requests, optionally (and by default) filtered by
   those with a status of open."
   ([access-token owner name page-size cursor]
-   (get-page-of-search-results access-token owner name page-size cursor true))
+   (get-page-of-pull-requests access-token owner name page-size cursor true))
   ([access-token owner name page-size cursor open?]
-   (let [variables {:owner owner :name name :first page-size :after cursor}
-         query (if open? search-for-open-pr-id-query search-for-pr-id-query)]
-     (make-graphql-post access-token query variables))))
+   (let [variables {:owner owner :name name :first page-size :after cursor}]
+     (if open?
+       (make-graphql-post access-token search-for-pr-id-query (merge {:states ["OPEN"]} variables))
+       (make-graphql-post access-token search-for-pr-id-query (merge {:states ["OPEN" "CLOSED" "MERGED"]} variables))))))
 
 (defn get-pull-request-id
   "Find the unique ID of a pull request on the repository at the
@@ -214,20 +110,47 @@
   (let [repo (parse-repo url)
         prnum (pull-request-number url)
         owner (:owner repo)
-        name (:name repo)]
-    (let [pull-request-url (string/lower-case (format "https://github.com/%s/%s/pull/%s" owner name prnum))
-          page (get-page-of-search-results access-token owner name *search-page-size* nil must-be-open?)]
-      (loop [page page
-             prs []]
-        (let [pageInfo (-> page :data :repository :pullRequests :pageInfo)
-              has-next (:hasNextPage pageInfo)
-              cursor (:endCursor pageInfo)
-              pull-requests (-> page :data :repository :pullRequests :nodes)
-              prs (concat prs pull-requests)]
-          (if-not has-next
-            (:id (first (filter #(= (:url %) pull-request-url) prs)))
-            (recur (get-page-of-search-results access-token owner name *search-page-size* cursor must-be-open?)
-                   prs)))))))
+        name (:name repo)
+        pull-request-url (string/lower-case (format "https://github.com/%s/%s/pull/%s" owner name prnum))
+        page (get-page-of-pull-requests access-token owner name *search-page-size* nil must-be-open?)]
+    (loop [page page
+           prs []]
+      (let [pageInfo (-> page :data :repository :pullRequests :pageInfo)
+            has-next (:hasNextPage pageInfo)
+            cursor (:endCursor pageInfo)
+            pull-requests (-> page :data :repository :pullRequests :nodes)
+            prs (concat prs pull-requests)]
+        (if-not has-next
+          (:id (first (filter #(= (:url %) pull-request-url) prs)))
+          (recur (get-page-of-pull-requests access-token owner name *search-page-size* cursor must-be-open?)
+                 prs))))))
+
+(defn get-page-of-issue-comments
+  "Get a page of issues comments on a particular pull request"
+  [access-token pull-request-id page-size cursor]
+  (let [variables {:pullRequestId pull-request-id :first page-size :after cursor}]
+    (make-graphql-post access-token search-for-issue-comment-id variables)))
+
+(defn get-issue-comment-id
+  "Find the unique ID of an issue comment on a pull request. Returns nil if not found."
+  [access-token comment-url]
+  (let [prurl (:pullRequestUrl (parse-comment-url comment-url))]
+    (if prurl
+      (let [prnum (get-pull-request-id access-token prurl false)
+            page (get-page-of-issue-comments access-token prnum *search-page-size* nil)]
+        (loop [page page
+               comments []]
+          (let [pageInfo (-> page :data :node :comments :pageInfo)
+                has-next (:hasNextPage pageInfo)
+                cursor (:endCursor pageInfo)
+                nodes (-> page :data :node :comments :nodes)
+                comments (concat comments nodes)]
+            (println "EAMONN DEBUG: pageInfo:"  pageInfo)
+            (if-not has-next
+              (:id (first (filter #(= (:url %) comment-url) comments)))
+              (recur (get-page-of-issue-comments access-token prnum *search-page-size* cursor)
+                     comments)))))
+      nil)))
 
 (defn get-open-pr-id
   "Find the unique ID of an open pull request. Returns nil of none are found."
@@ -254,6 +177,14 @@
        (let [merged-variables (merge variables {:pullRequestId pr-id})]
          (make-graphql-post access-token mutation merged-variables))))))
 
+(defn modify-comment
+  "Modify a comment at the url with the provided mutation and variables."
+  [access-token url mutation variables]
+  (let [comment-id (get-issue-comment-id access-token url)]
+    (when comment-id
+      (let [merged-variables (merge variables {:commentId comment-id})]
+        (make-graphql-post access-token mutation merged-variables)))))
+
 
 (def create-pr-defaults {:draft true
                          :maintainerCanModify true})
@@ -274,7 +205,10 @@
   include :draft (default: true), indicating whether the pull request
   is ready for review and :maintainerCanModify (default: true)
   indicating whether the repo owner is allowed to modify the pull
-  request."
+  request.
+
+  Returns the pull request's permanent URL.
+  "
   ([access-token url pull-request]
    (let [repo (parse-repo url)]
      (if repo
@@ -311,10 +245,13 @@
   * access-token -- the Github access token to use. Must have repo permissions.
 
   * pull-request-url -- the full (e.g.,
-  https://github.com/owner/name/pulls/1) or
-  partial (owner/name/pulls/1) URL of the pull request.
+  https://github.com/owner/name/pull/1) or
+  partial (owner/name/pull/1) URL of the pull request.
 
-  * updated -- a map describing the update. The keys: :title, :body."
+  * updated -- a map describing the update. The keys: :title, :body.
+
+  Returns the pull request's permanent URL.
+  "
   [access-token pull-request-url updated]
   (-> (modify-pull-request access-token pull-request-url update-pull-request-mutation updated)
       :data
@@ -331,8 +268,10 @@
   have repo permissions.
 
   * pull-request-url -- the full (e.g.,
-  https://github.com/owner/name/pulls/1) or
-  partial (owner/name/pulls/1) URL of the pull request.
+  https://github.com/owner/name/pull/1) or
+  partial (owner/name/pull/1) URL of the pull request.
+
+  Returns the pull request's permanent URL.
   "
   [access-token pull-request-url]
   (-> (modify-pull-request access-token pull-request-url mark-ready-for-review-mutation)
@@ -349,10 +288,12 @@
   have repo permissions.
 
   * pull-request-url -- the full (e.g.,
-  https://github.com/owner/name/pulls/1) or
-  partial (owner/name/pulls/1) URL of the pull request.
+  https://github.com/owner/name/pull/1) or
+  partial (owner/name/pull/1) URL of the pull request.
 
   * comment-body -- the comment to add.
+
+  Returns the comment's permanent URL.
   "
   [access-token pull-request-url comment-body]
   (-> (modify-pull-request access-token pull-request-url add-comment-mutation {:body comment-body})
@@ -360,6 +301,27 @@
       :addComment
       :commentEdge
       :node
+      :url))
+
+(defn edit-pull-request-comment
+  "Changes the body of a comment
+
+  Arguments:
+  * access-token -- the Github access token to use.
+
+  * comment-url -- e.g., the full (e.g.,
+  https://github.com/owner/name/pull/4#issuecomment-702092682) or
+  partial (owner/name/pull/4#issuecomment-702092682) URL of the comment.
+
+  * comment-body -- the new body of the comment.
+
+  Returns the comment's permanent URL.
+  "
+  [access-token comment-url comment-body]
+  (-> (modify-comment access-token comment-url edit-comment-mutation {:body comment-body})
+      :data
+      :updateIssueComment
+      :issueComment
       :url))
 
 (defn close-pull-request
@@ -370,8 +332,8 @@
   have repo permissions.
 
   * pull-request-url -- the full (e.g.,
-  https://github.com/owner/name/pulls/1) or
-  partial (owner/name/pulls/1) URL of the pull request.
+  https://github.com/owner/name/pull/1) or
+  partial (owner/name/pull/1) URL of the pull request.
   "
   [access-token pull-request-url]
   (-> (modify-pull-request access-token pull-request-url close-pull-request-mutation)
@@ -388,8 +350,8 @@
   have repo permissions.
 
   * pull-request-url -- the full (e.g.,
-  https://github.com/owner/name/pulls/1) or
-  partial (owner/name/pulls/1) URL of the pull request.
+  https://github.com/owner/name/pull/1) or
+  partial (owner/name/pull/1) URL of the pull request.
   "
   [access-token pull-request-url]
   (-> (modify-pull-request access-token pull-request-url reopen-pull-request-mutation)
@@ -406,8 +368,8 @@
   permissions.
 
   * pull-request-url -- the full (e.g.,
-  https://github.com/owner/name/pulls/1) or
-  partial (owner/name/pulls/1) URL of the pull request.
+  https://github.com/owner/name/pull/1) or
+  partial (owner/name/pull/1) URL of the pull request.
 
   * merge-options -- a map with keys that can include :title (the
   headline of the commit), :body (any body description of the
