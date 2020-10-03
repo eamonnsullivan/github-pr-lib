@@ -1,0 +1,10 @@
+mutation AddComment ($pullRequestId: ID!, $body: String!) {
+  addComment(input: {subjectId: $pullRequestId, body: $body}) {
+    commentEdge {
+      node {
+        id
+        url
+      }
+    }
+  }
+}
