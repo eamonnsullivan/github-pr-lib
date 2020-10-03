@@ -3,9 +3,7 @@ query SearchForPR (
   $name: String!,
   $states: [PullRequestState!] = [OPEN],
   $first: Int!,
-  $after: String,
-  $commentFirst: Int!,
-  $commentAfter: String)  {
+  $after: String)  {
   repository(owner:$owner, name:$name) {
     id
     pullRequests(first: $first, after: $after, states: $states) {
@@ -13,17 +11,6 @@ query SearchForPR (
         id
         url
         state
-        comments(first: $commentFirst, after: $commentAfter) {
-          nodes {
-            id
-            url
-            author {
-              login
-              url
-            }
-            body
-          }
-        }
       }
       pageInfo {
       	hasNextPage

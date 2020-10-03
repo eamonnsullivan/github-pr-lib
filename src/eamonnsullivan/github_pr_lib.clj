@@ -145,7 +145,6 @@
                 cursor (:endCursor pageInfo)
                 nodes (-> page :data :node :comments :nodes)
                 comments (concat comments nodes)]
-            (println "EAMONN DEBUG: pageInfo:"  pageInfo)
             (if-not has-next
               (:id (first (filter #(= (:url %) comment-url) comments)))
               (recur (get-page-of-issue-comments access-token prnum *search-page-size* cursor)
