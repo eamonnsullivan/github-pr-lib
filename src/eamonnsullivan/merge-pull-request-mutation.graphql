@@ -1,0 +1,13 @@
+mutation MergePullRequest ($pullRequestId: ID!, $title: String, $body: String, $mergeMethod: PullRequestMergeMethod, $authorEmail: String, $expectedHeadRef: GitObjectID ) {
+  mergePullRequest(input: {pullRequestId: $pullRequestId,
+      commitHeadline: $title,
+      commitBody: $body,
+      mergeMethod: $mergeMethod,
+      authorEmail: $authorEmail,
+      expectedHeadOid: $expectedHeadRef}) {
+    pullRequest {
+      id
+      permalink
+    }
+  }
+}

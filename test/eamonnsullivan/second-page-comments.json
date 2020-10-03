@@ -1,0 +1,41 @@
+{
+  "data": {
+    "node": {
+      "comments": {
+        "nodes": [
+          {
+            "id": "MDEyOklzc3VlQ29tbWVudDcwMjA2OTAxNw=2",
+            "url": "https://github.com/eamonnsullivan/github-pr-lib/pull/4#issuecomment-702069012",
+            "body": "This is a brand new comment body.",
+            "author": {
+              "login": "eamonnsullivan",
+              "url": "https://github.com/eamonnsullivan"
+            }
+          },
+          {
+            "id": "MDEyOklzc3VlQ29tbWVudDcwMjA3NjE0Ng=2",
+            "url": "https://github.com/eamonnsullivan/github-pr-lib/pull/4#issuecomment-702076142",
+            "body": "Adding another comment.",
+            "author": {
+              "login": "eamonnsullivan",
+              "url": "https://github.com/eamonnsullivan"
+            }
+          },
+          {
+            "id": "MDEyOklzc3VlQ29tbWVudDcwMjA5MjY4Mg=2",
+            "url": "https://github.com/eamonnsullivan/github-pr-lib/pull/4#issuecomment-702092683",
+            "body": "Adding another comment.",
+            "author": {
+              "login": "eamonnsullivan",
+              "url": "https://github.com/eamonnsullivan"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false,
+          "endCursor": "Y3Vyc29yOnYyOpHOKdkVig=2"
+        }
+      }
+    }
+  }
+}

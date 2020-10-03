@@ -35,8 +35,14 @@ The `title`, `base` and `branch` are mandatory. You can omit the `body`, and the
 (mark-ready-for-review token new-pr-url)
 ```
 ### Comment on a pull request
+Only handles issue comments on pull requests at the moment. The body text can use Github-style markdown.
 ```
-(add-pull-request-comment token new-pr-url "Another comment.")
+;; returns the permalink for the comment
+(def comment-link (add-pull-request-comment token new-pr-url "Another comment."))
+```
+### Edit an issue comment
+```
+(edit-pull-request-comment token comment-link "The new body for the comment, with *some markdown* and `stuff`.")
 ```
 ### Close a pull request
 ```

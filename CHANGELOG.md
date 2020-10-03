@@ -1,6 +1,9 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## [0.0.5]-2020-10-03
+- Implement editing of issue comments
+
 ## [0.0.5]-2020-10-02
 - Use a 'main' branch, pull-request checks
 
