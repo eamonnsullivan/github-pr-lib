@@ -1,7 +1,7 @@
 {
   "data": {
     "updateIssueComment": null
-  }
+  },
   "errors": [
     {
       "type": "NOT_FOUND",
