@@ -1,8 +1,0 @@
-mutation ReopenPullRequest ($pullRequestId: ID!) {
-  reopenPullRequest(input: {pullRequestId: $pullRequestId}) {
-    pullRequest {
-      id
-      permalink
-    }
-  }
-}
