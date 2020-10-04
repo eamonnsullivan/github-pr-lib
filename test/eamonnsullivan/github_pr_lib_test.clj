@@ -169,13 +169,13 @@
       (is (= nil (sut/get-issue-comment-id "secret" "https://github.com/owner/name/pull/1#issuecomment-1"))))))
 
 (deftest test-update-pull-request
-  (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
+  (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body update-pr-success})]
     (testing "updates a pull request"
       (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/3" (sut/update-pull-request "secret"
                                                                                                "https://github.com/eamonnsullivan/github-pr-lib/pull/3"
                                                                                                {:title "A new title" :body "A new body"})))))
-  (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
+  (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body update-pr-failure})]
     (testing "Throws exception on update error"
       (is (thrown-with-msg? RuntimeException #"Could not resolve to a node with the global id of 'invalid-id'"
@@ -183,12 +183,12 @@
                                                      "https://github.com/eamonnsullivan/github-pr-lib/pull/3"
                                                      {:title "A new title" :body "A new body"}))))))
 (deftest test-mark-ready-for-review
-  (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
+  (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body mark-ready-success})]
     (testing "marks pull request as ready for review"
       (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/3" (sut/mark-ready-for-review "secret"
                                                                                                  "https://github.com/eamonnsullivan/github-pr-lib/pull/3")))))
-  (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
+  (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body mark-ready-failure})]
     (testing "Throws exception on error"
       (is (thrown-with-msg? RuntimeException #"Could not resolve to a node with the global id of 'invalid-id'"
@@ -196,13 +196,13 @@
                                                        "https://github.com/eamonnsullivan/github-pr-lib/pull/3"))))))
 
 (deftest test-add-pull-request-comment
-  (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
+  (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body add-comment-success})]
     (testing "adds comment to pull request"
       (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4#issuecomment-702076146" (sut/add-pull-request-comment "secret"
                                                                                                                            "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
                                                                                                                            "This is a comment.")))))
-  (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
+  (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body add-comment-failure})]
     (testing "Throws exception on error"
       (is (thrown-with-msg? RuntimeException #"Could not resolve to a node with the global id of 'invalid'"
@@ -231,12 +231,12 @@
                              "This is an updated comment."))))))
 
 (deftest test-close-pull-request
-  (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
+  (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body close-pull-request-success})]
     (testing "closes a pull request"
       (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4" (sut/close-pull-request "secret"
                                                                                               "https://github.com/eamonnsullivan/github-pr-lib/pull/4")))))
-  (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
+  (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body close-pull-request-failure})]
     (testing "Throws exception on error"
       (is (thrown-with-msg? RuntimeException #"Could not resolve to a node with the global id of 'invalid'"
@@ -244,14 +244,12 @@
                                                     "https://github.com/eamonnsullivan/github-pr-lib/pull/4"))))))
 
 (deftest test-reopen-pull-request
-  (with-redefs [sut/get-open-pr-id (fn [_ _] nil)
-                sut/get-pull-request-id (fn [_ _ _] "some-id")
+  (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body reopen-pull-request-success})]
     (testing "reopens a pull request"
       (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4" (sut/reopen-pull-request "secret"
                                                                                                "https://github.com/eamonnsullivan/github-pr-lib/pull/4")))))
-  (with-redefs [sut/get-open-pr-id (fn [_ _] nil)
-                sut/get-pull-request-id (fn [_ _ _] "some-id")
+  (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body reopen-pull-request-failure})]
     (testing "Throws exception on error"
       (is (thrown-with-msg? RuntimeException #"Could not resolve to a node with the global id of 'invalid'"
@@ -266,7 +264,7 @@
       (is (not= nil (:expectedHeadRef variables))))))
 
 (deftest test-merge-pull-request
-  (with-redefs [sut/get-open-pr-id (fn [_ _] "some id")
+  (with-redefs [sut/get-pull-request-id (fn [_ _] "some id")
                 sut/get-pull-request-info (fn [_ _] {:headRefOid "commit-id"})
                 sut/http-post (fn [_ _ _] {:body merge-pull-request-success})]
     (testing "merges a pull request"
@@ -274,7 +272,7 @@
                                                                                               "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
                                                                                               {:title "a commit" :body "some description"
                                                                                                :author-email "someone@somewhere.com"})))))
-  (with-redefs [sut/get-open-pr-id (fn [_ _] "some id")
+  (with-redefs [sut/get-pull-request-id (fn [_ _] "some id")
                 sut/get-pull-request-info (fn [_ _] {:headRefOid "commit-id"})
                 sut/http-post (fn [_ _ _] {:body merge-pull-request-failure})]
     (testing "Throws exception on error"
@@ -283,7 +281,7 @@
                                                     "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
                                                     {:title "a commit" :body "some description"
                                                      :author-email "someone@somewhere.com"})))))
-  (with-redefs [sut/get-open-pr-id (fn [_ _] "some id")
+  (with-redefs [sut/get-pull-request-id (fn [_ _] "some id")
                 sut/get-pull-request-info (fn [_ _] nil)
                 sut/http-post (fn [_ _ _] {:body merge-pull-request-failure})]
     (testing "Throws exception if the pull request can't be found"
@@ -292,7 +290,7 @@
                                                     "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
                                                     {:title "a commit" :body "some description"
                                                      :author-email "someone@somewhere.com"})))))
-  (with-redefs [sut/get-open-pr-id (fn [_ _] "some id")
+  (with-redefs [sut/get-pull-request-id (fn [_ _] "some id")
                 sut/get-pull-request-info (fn [_ _] {:headRefOid "commit-id"})
                 sut/http-post (make-fake-post nil merge-pull-request-success nil assert-merge-payload-defaults)]
     (testing "merges a pull request"
@@ -314,8 +312,7 @@
 
 (deftest test-get-pull-request-info
   (with-redefs [sut/http-post (fn [_ _ _] {:body pull-request-properties})
-                sut/get-open-pr-id (fn [_ _] nil)
-                sut/get-pull-request-id (fn [_ _ _] "some-id")]
+                sut/get-pull-request-id (fn [_ _] "some-id")]
     (let [response (sut/get-pull-request-info "secret" "owner/name/pull/1")]
       (is (= "A test title" (:title response)))
       (is (= "With a body" (:body response)))

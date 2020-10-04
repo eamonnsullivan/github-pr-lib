@@ -1,15 +1,12 @@
 (ns eamonnsullivan.github-pr-lib
   (:require [clj-http.client :as client]
-            [clojure.string :as string]
             [clojure.data.json :as json]
             [clojure.java.io :as io]))
 
 (def github-url "https://api.github.com/graphql")
-(def ^:dynamic *search-page-size* 50)
 
 (def get-repo-id-query (slurp (io/resource "graphql/get-repo-id-query.graphql")))
 (def create-pull-request-mutation (slurp (io/resource "graphql/create-pull-request-mutation.graphql")))
-(def search-for-pr-id-query (slurp (io/resource "graphql/search-for-pr-id-query.graphql")))
 (def update-pull-request-mutation (slurp (io/resource "graphql/update-pull-request-mutation.graphql")))
 (def mark-ready-for-review-mutation (slurp (io/resource "graphql/mark-ready-for-review-mutation.graphql")))
 (def add-comment-mutation (slurp (io/resource "graphql/add-comment-mutation.graphql")))
@@ -18,7 +15,6 @@
 (def reopen-pull-request-mutation (slurp (io/resource "graphql/reopen-pull-request-mutation.graphql")))
 (def merge-pull-request-mutation (slurp (io/resource "graphql/merge-pull-request-mutation.graphql")))
 (def pull-request-query (slurp (io/resource "graphql/pull-request-query.graphql")))
-(def search-for-issue-comment-id (slurp (io/resource "graphql/search-for-issue-comment-id-query.graphql")))
 
 (defn request-opts
   "Add the authorization header to the http request options."
@@ -26,12 +22,12 @@
   {:ssl? true :headers {"Authorization" (str "bearer " access-token)}})
 
 (defn http-post
-  "Make a POST request to a url with body payload and request options."
+  "Make a POST request to a url with payload and request options."
   [url payload opts]
   (client/post url (merge {:content-type :json :body payload} opts)))
 
 (defn http-get
-  "Make a GET request, with options"
+  "Make a GET request to a url, with options"
   [access-token url options]
   (client/get url (merge {:username access-token} options)))
 
@@ -57,65 +53,65 @@
                  "/" repo
                  "/issues/comments/" comment-number)
         response (http-get access-token url {:throw-exceptions false
-                                             :access "application/vnd.github.v3+json"})
+                                             :accept "application/vnd.github.v3+json"})
         body (json/read-str (:body response) :key-fn keyword)]
     (:node_id body)))
 
 (defn make-graphql-post
-"Make a GraphQL request to Github using the provided query/mutation
+  "Make a GraphQL request to Github using the provided query/mutation
   and variables. If there are any errors, throw a RuntimeException,
   with the message set to the first error and the rest of the response
   as the cause/additional information."
-[access-token graphql variables]
-(let [payload (json/write-str {:query graphql :variables variables})
-      response (http-post github-url payload (request-opts access-token))
-      body (json/read-str (response :body) :key-fn keyword)
-      errors (:errors body)]
-  (if errors
-    (throw (ex-info (:message (first errors)) response))
-    body)))
+  [access-token graphql variables]
+  (let [payload (json/write-str {:query graphql :variables variables})
+        response (http-post github-url payload (request-opts access-token))
+        body (json/read-str (response :body) :key-fn keyword)
+        errors (:errors body)]
+    (if errors
+      (throw (ex-info (:message (first errors)) response))
+      body)))
 
 (defn parse-repo
-"Parse a repository url (a full url or just the owner/name part) and
+  "Parse a repository url (a full url or just the owner/name part) and
   return a map with :owner and :name keys."
-[url]
-(let [matches (re-matches #"(https://github.com/)?([^/]*)/([^/]*).*$" url)
-      [_ _ owner name] matches]
-  (if (and owner name (not-empty owner) (not-empty name))
-    {:owner owner :name name}
-    nil)))
+  [url]
+  (let [matches (re-matches #"(https://github.com/)?([^/]*)/([^/]*).*$" url)
+        [_ _ owner name] matches]
+    (if (and owner name (not-empty owner) (not-empty name))
+      {:owner owner :name name}
+      nil)))
 
 (defn pull-request-number
-"Get the pull request number from a full or partial URL."
-[pull-request-url]
-(let [matches (re-matches #"(https://github.com/)?[^/]*/[^/]*/pull/([0-9]*)" pull-request-url)
-      [_ _ number] matches]
-  (if (not-empty number)
-    (Integer/parseInt number)
-    nil)))
+  "Get the pull request number from a full or partial URL."
+  [pull-request-url]
+  (let [matches (re-matches #"(https://github.com/)?[^/]*/[^/]*/pull/([0-9]*)" pull-request-url)
+        [_ _ number] matches]
+    (if (not-empty number)
+      (Integer/parseInt number)
+      nil)))
 
 (defn parse-comment-url
-"Get the full comment url and pull request url from an issue comment URL."
-[comment-url]
-(let [matches (re-matches #"(https://github.com/)?([^/]*)/([^/]*)/pull/([0-9]*)#issuecomment-([0-9]*)" comment-url)
-      [_ _ owner name number comment] matches]
-  (if (and (not-empty owner)
-           (not-empty name)
-           (not-empty number)
-           (not-empty comment))
-    {:pullRequestUrl (format "https://github.com/%s/%s/pull/%s" owner name number)
-     :issueComment comment}
-    nil)))
+  "Get the comment number and pull request url from an issue comment URL."
+  [comment-url]
+  (let [matches (re-matches #"(https://github.com/)?([^/]*)/([^/]*)/pull/([0-9]*)#issuecomment-([0-9]*)" comment-url)
+        [_ _ owner name number comment] matches]
+    (if (and (not-empty owner)
+             (not-empty name)
+             (not-empty number)
+             (not-empty comment))
+      {:pullRequestUrl (format "https://github.com/%s/%s/pull/%s" owner name number)
+       :issueComment comment}
+      nil)))
 
 (defn get-repo-id
-"Get the unique ID value for a repository."
-([access-token url]
- (let [repo (parse-repo url)
-       owner (:owner repo)
-       name (:name repo)]
-   (if repo
-     (get-repo-id access-token owner name)
-     nil)))
+  "Get the unique ID value for a repository."
+  ([access-token url]
+   (let [repo (parse-repo url)
+         owner (:owner repo)
+         name (:name repo)]
+     (if repo
+       (get-repo-id access-token owner name)
+       nil)))
   ([access-token owner repo-name]
    (let [variables {:owner owner :name repo-name}]
      (-> (make-graphql-post access-token get-repo-id-query variables)
@@ -142,15 +138,9 @@
   (let [repo (parse-repo comment-url)
         owner (:owner repo)
         name (:name repo)
-        comment-info (parse-comment-url comment-url)
-        comment (:issueComment comment-info)]
+        comment (:issueComment (parse-comment-url comment-url))]
     (get-comment-node-id access-token owner name comment)))
 
-
-(defn get-open-pr-id
-  "Find the unique ID of an open pull request. Returns nil of none are found."
-  ([access-token pull-request-url]
-   (get-pull-request-id access-token pull-request-url true)))
 
 (defn get-pull-request-info
   "Find some info about a pull request.
@@ -160,8 +150,7 @@
   :isDraft, :merged, :mergeable (MERGEABLE, CONFLICTING or UNKNOWN),
   :number, :repository (:id, :url), :state (CLOSED, MERGED or OPEN)."
   [access-token pull-request-url]
-  (let [pr-id (or (get-open-pr-id access-token pull-request-url)
-                  (get-pull-request-id access-token pull-request-url false))]
+  (let [pr-id (get-pull-request-id access-token pull-request-url)]
     (when pr-id
       (-> (make-graphql-post access-token pull-request-query {:pullRequestId pr-id})
           :data
@@ -172,7 +161,7 @@
   ([access-token url mutation]
    (modify-pull-request access-token url mutation nil))
   ([access-token url mutation variables]
-   (let [pr-id (or (get-open-pr-id access-token url) (get-pull-request-id access-token url false))]
+   (let [pr-id (get-pull-request-id access-token url)]
      (when pr-id
        (let [merged-variables (merge variables {:pullRequestId pr-id})]
          (make-graphql-post access-token mutation merged-variables))))))
