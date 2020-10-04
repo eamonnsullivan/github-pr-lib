@@ -30,61 +30,81 @@
   [url payload opts]
   (client/post url (merge {:content-type :json :body payload} opts)))
 
+(defn http-get
+  "Make a GET request, with options"
+  [access-token url options]
+  (client/get url (merge {:username access-token} options)))
+
+(defn get-pull-request-node-id
+  "Get the node id of a pull request using the v3 REST api, optionally
+  filtered by state (\"open\", \"closed\", or the default of \"all\")"
+  ([access-token owner repo-name pullnum]
+   (get-pull-request-node-id access-token owner repo-name pullnum "all"))
+  ([access-token owner repo-name pull-number state]
+   (let [url (str "https://api.github.com/repos/" owner
+                  "/" repo-name
+                  "/pulls/" pull-number)
+         response (http-get access-token url {:throw-exceptions false
+                                              :accept "application/vnd.github.v3+json"
+                                              :query-params {"state" state}})
+         body (json/read-str (:body response) :key-fn keyword)]
+     (:node_id body))))
+
 (defn make-graphql-post
-  "Make a GraphQL request to Github using the provided query/mutation
+"Make a GraphQL request to Github using the provided query/mutation
   and variables. If there are any errors, throw a RuntimeException,
   with the message set to the first error and the rest of the response
   as the cause/additional information."
-  [access-token graphql variables]
-  (let [payload (json/write-str {:query graphql :variables variables})
-        response (http-post github-url payload (request-opts access-token))
-        body (json/read-str (response :body) :key-fn keyword)
-        errors (:errors body)]
-    (if errors
-      (throw (ex-info (:message (first errors)) response))
-      body)))
+[access-token graphql variables]
+(let [payload (json/write-str {:query graphql :variables variables})
+      response (http-post github-url payload (request-opts access-token))
+      body (json/read-str (response :body) :key-fn keyword)
+      errors (:errors body)]
+  (if errors
+    (throw (ex-info (:message (first errors)) response))
+    body)))
 
 (defn parse-repo
-  "Parse a repository url (a full url or just the owner/name part) and
+"Parse a repository url (a full url or just the owner/name part) and
   return a map with :owner and :name keys."
-  [url]
-  (let [matches (re-matches #"(https://github.com/)?([^/]*)/([^/]*).*$" url)
-        [_ _ owner name] matches]
-    (if (and owner name (not-empty owner) (not-empty name))
-      {:owner owner :name name}
-      nil)))
+[url]
+(let [matches (re-matches #"(https://github.com/)?([^/]*)/([^/]*).*$" url)
+      [_ _ owner name] matches]
+  (if (and owner name (not-empty owner) (not-empty name))
+    {:owner owner :name name}
+    nil)))
 
 (defn pull-request-number
-  "Get the pull request number from a full or partial URL."
-  [pull-request-url]
-  (let [matches (re-matches #"(https://github.com/)?[^/]*/[^/]*/pull/([0-9]*)" pull-request-url)
-        [_ _ number] matches]
-    (if (not-empty number)
-      (Integer/parseInt number)
-      nil)))
+"Get the pull request number from a full or partial URL."
+[pull-request-url]
+(let [matches (re-matches #"(https://github.com/)?[^/]*/[^/]*/pull/([0-9]*)" pull-request-url)
+      [_ _ number] matches]
+  (if (not-empty number)
+    (Integer/parseInt number)
+    nil)))
 
 (defn parse-comment-url
-  "Get the full comment url and pull request url from an issue comment URL."
-  [comment-url]
-  (let [matches (re-matches #"(https://github.com/)?([^/]*)/([^/]*)/pull/([0-9]*)#(issuecomment-[0-9]*)" comment-url)
-        [_ _ owner name number comment] matches]
-    (if (and (not-empty owner)
-             (not-empty name)
-             (not-empty number)
-             (not-empty comment))
-      {:pullRequestUrl (format "https://github.com/%s/%s/pull/%s" owner name number)
-       :issueComment (format "#%s" comment)}
-      nil)))
+"Get the full comment url and pull request url from an issue comment URL."
+[comment-url]
+(let [matches (re-matches #"(https://github.com/)?([^/]*)/([^/]*)/pull/([0-9]*)#(issuecomment-[0-9]*)" comment-url)
+      [_ _ owner name number comment] matches]
+  (if (and (not-empty owner)
+           (not-empty name)
+           (not-empty number)
+           (not-empty comment))
+    {:pullRequestUrl (format "https://github.com/%s/%s/pull/%s" owner name number)
+     :issueComment (format "#%s" comment)}
+    nil)))
 
 (defn get-repo-id
-  "Get the unique ID value for a repository."
-  ([access-token url]
-   (let [repo (parse-repo url)
-         owner (:owner repo)
-         name (:name repo)]
-     (if repo
-       (get-repo-id access-token owner name)
-       nil)))
+"Get the unique ID value for a repository."
+([access-token url]
+ (let [repo (parse-repo url)
+       owner (:owner repo)
+       name (:name repo)]
+   (if repo
+     (get-repo-id access-token owner name)
+     nil)))
   ([access-token owner repo-name]
    (let [variables {:owner owner :name repo-name}]
      (-> (make-graphql-post access-token get-repo-id-query variables)
@@ -92,39 +112,18 @@
          :repository
          :id))))
 
-(defn get-page-of-pull-requests
-  "Get a page of pull requests, optionally (and by default) filtered by
-  those with a status of open."
-  ([access-token owner name page-size cursor]
-   (get-page-of-pull-requests access-token owner name page-size cursor true))
-  ([access-token owner name page-size cursor open?]
-   (let [variables {:owner owner :name name :first page-size :after cursor}]
-     (if open?
-       (make-graphql-post access-token search-for-pr-id-query (merge {:states ["OPEN"]} variables))
-       (make-graphql-post access-token search-for-pr-id-query (merge {:states ["OPEN" "CLOSED" "MERGED"]} variables))))))
-
 (defn get-pull-request-id
   "Find the unique ID of a pull request on the repository at the
   provided url. Set must-be-open? to true to filter the pull requests
   to those with a status of open. Returns nil if not found."
-  [access-token url must-be-open?]
-  (let [repo (parse-repo url)
-        prnum (pull-request-number url)
-        owner (:owner repo)
-        name (:name repo)
-        pull-request-url (string/lower-case (format "https://github.com/%s/%s/pull/%s" owner name prnum))
-        page (get-page-of-pull-requests access-token owner name *search-page-size* nil must-be-open?)]
-    (loop [page page
-           prs []]
-      (let [pageInfo (-> page :data :repository :pullRequests :pageInfo)
-            has-next (:hasNextPage pageInfo)
-            cursor (:endCursor pageInfo)
-            pull-requests (-> page :data :repository :pullRequests :nodes)
-            prs (concat prs pull-requests)]
-        (if-not has-next
-          (:id (first (filter #(= (:url %) pull-request-url) prs)))
-          (recur (get-page-of-pull-requests access-token owner name *search-page-size* cursor must-be-open?)
-                 prs))))))
+  ([access-token url]
+   (get-pull-request-id access-token url false))
+  ([access-token url must-be-open?]
+   (let [repo (parse-repo url)
+         prnum (pull-request-number url)
+         owner (:owner repo)
+         name (:name repo)]
+     (get-pull-request-node-id access-token owner name prnum (if must-be-open? "open" "all")))))
 
 (defn get-page-of-issue-comments
   "Get a page of issues comments on a particular pull request"
@@ -158,7 +157,12 @@
    (get-pull-request-id access-token pull-request-url true)))
 
 (defn get-pull-request-info
-  "Find some info about a pull request."
+  "Find some info about a pull request.
+
+  Available properties: :id, :title, :body, :baseRefOid,
+  :headRefOid, :permalink, :author (:login, :url), :closed,
+  :isDraft, :merged, :mergeable (MERGEABLE, CONFLICTING or UNKNOWN),
+  :number, :repository (:id, :url), :state (CLOSED, MERGED or OPEN)."
   [access-token pull-request-url]
   (let [pr-id (or (get-open-pr-id access-token pull-request-url)
                   (get-pull-request-id access-token pull-request-url false))]

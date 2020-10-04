@@ -8,8 +8,6 @@
 (def repo-id-response-failure (slurp "./test/eamonnsullivan/fixtures/repo-response-failure.json"))
 (def create-pr-response-success (slurp "./test/eamonnsullivan/fixtures/create-pr-response-success.json"))
 (def create-pr-response-failure (slurp "./test/eamonnsullivan/fixtures/create-pr-response-failure.json"))
-(def first-pr-search-page (slurp "./test/eamonnsullivan/fixtures/first-page-pr.json"))
-(def second-pr-search-page (slurp "./test/eamonnsullivan/fixtures/second-page-pr.json"))
 (def first-comment-search-page (slurp "./test/eamonnsullivan/fixtures/first-page-comments.json"))
 (def second-comment-search-page (slurp "./test/eamonnsullivan/fixtures/second-page-comments.json"))
 (def update-pr-success (slurp "./test/eamonnsullivan/fixtures/update-pr-success.json"))
@@ -26,6 +24,7 @@
 (def reopen-pull-request-failure (slurp "./test/eamonnsullivan/fixtures/reopen-pull-request-failure.json"))
 (def merge-pull-request-success (slurp "./test/eamonnsullivan/fixtures/merge-pull-request-success.json"))
 (def merge-pull-request-failure (slurp "./test/eamonnsullivan/fixtures/merge-pull-request-failure.json"))
+(def pull-request-properties (slurp "./test/eamonnsullivan/fixtures/pull-request-properties.json"))
 
 (deftest test-get-repo-id
   (with-redefs [sut/http-post (fn [_ _ _] {:body repo-id-response-success})]
@@ -145,6 +144,15 @@
     (is (= nil (sut/pull-request-number "something else")))
     (is (= nil (sut/pull-request-number "https://github/owner/name/pull")))))
 
+
+(deftest test-get-pull-request-id
+  (with-redefs [sut/http-get (fn [_ _ _] {:body "{\"node_id\": \"a-node-id\"}"})]
+    (testing "finds the node id in the body"
+      (is (= "a-node-id" (sut/get-pull-request-id "secret" "https://github.com/owner/name/pull/1")))))
+  (with-redefs [sut/http-get (fn [_ _ _] {:body "{}"})]
+    (testing "returns nil on failure"
+      (is (= nil (sut/get-pull-request-id "secret" "https://github.com/owner/name/pull/2"))))))
+
 (defn fake-paging-post
   [page1 page2]
   (fn [_ payload _]
@@ -153,14 +161,6 @@
       (if after
         {:body page2}
         {:body page1}))))
-
-(deftest test-get-pr-id
-  (with-redefs [sut/http-post (fake-paging-post first-pr-search-page second-pr-search-page)]
-    (testing "finds pull request id"
-      (is (= "MDExOlB1bGxSZXF1ZXN0MTU5NjI3ODc2" (sut/get-open-pr-id "secret" "https://github.com/eamonnsullivan/something/pull/2")))
-      (is (= "MDExOlB1bGxSZXF1ZXN0MTYwOTE1ODA0" (sut/get-open-pr-id "secret" "https://github.com/eamonnsullivan/something/pull/5"))))
-    (testing "finds pull request id on subsequent pages"
-      (is (= "MDExOlB1bGxSZXF1ZXN0MTU5NjI3ODc2" (sut/get-open-pr-id "secret" "https://github.com/eamonnsullivan/something/pull/7"))))))
 
 (deftest test-get-issue-comment-id
   (with-redefs [sut/http-post (fake-paging-post first-comment-search-page second-comment-search-page)]
@@ -321,3 +321,18 @@
   (testing "return nil when a pull request url can't be found"
     (is (= nil
            (:pullRequestUrl (sut/parse-comment-url "https://news.bbc.co.uk"))))))
+
+(deftest test-get-pull-request-info
+  (with-redefs [sut/http-post (fn [_ _ _] {:body pull-request-properties})
+                sut/get-open-pr-id (fn [_ _] nil)
+                sut/get-pull-request-id (fn [_ _ _] "some-id")]
+    (let [response (sut/get-pull-request-info "secret" "owner/name/pull/1")]
+      (is (= "A test title" (:title response)))
+      (is (= "With a body" (:body response)))
+      (is (= "johnsmith" (-> response :author :login)))
+      (is (= "https://github.com/owner/name" (-> response :repository :url)))
+      (is (= false (:isDraft response)))
+      (is (= "MERGED" (:state response)))
+      (is (= true (:merged response)))
+      (is (= "UNKNOWN" (:mergeable response)))
+      (is (= 9 (:number response))))))

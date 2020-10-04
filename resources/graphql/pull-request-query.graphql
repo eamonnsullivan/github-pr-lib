@@ -2,9 +2,26 @@ query PullRequestQuery ($pullRequestId: ID!) {
   node(id: $pullRequestId) {
     ... on PullRequest {
       id
+      title
+      body
       baseRefOid
       headRefOid
       permalink
+      author {
+        login
+        url
+      }
+      body
+      closed
+      isDraft
+      merged
+      mergeable
+      number
+      repository {
+        id
+        url
+      }
+      state
     }
   }
 }

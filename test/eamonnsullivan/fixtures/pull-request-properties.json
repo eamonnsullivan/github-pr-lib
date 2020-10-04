@@ -1,0 +1,26 @@
+{
+  "data": {
+    "node": {
+      "id": "MDExOlB1bGxSZXF1ZXN0MTYyMTgyMzIz",
+      "title": "A test title",
+      "body": "With a body",
+      "baseRefOid": "bfd5dcb...",
+      "headRefOid": "214012f...",
+      "permalink": "https://github.com/owner/name/pull/9",
+      "author": {
+        "login": "johnsmith",
+        "url": "https://github.com/johnsmith"
+      },
+      "closed": true,
+      "isDraft": false,
+      "merged": true,
+      "mergeable": "UNKNOWN",
+      "number": 9,
+      "repository": {
+        "id": "MDEwOlJlcG9zaXRvcnk5MjQyMDExMQ==",
+        "url": "https://github.com/owner/name"
+      },
+      "state": "MERGED"
+    }
+  }
+}
