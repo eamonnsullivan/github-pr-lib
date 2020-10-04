@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## [0.0.11]-2020-10-04
+- Refactor getting node ids to avoid paging requests
+- Expose more properties about pull requests
+
 ## [0.0.9]-2020-10-03
 -fix error in build.
 

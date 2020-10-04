@@ -19,7 +19,8 @@ All of these methods return the permalink of the new or updated pull request or 
               :branch "the name of the branch you want to merge"
               :draft true
               :maintainerCanModify true})
-(def new-pr-url (create-pull-request token "https://github.com/eamonnsullivan/github-pr-lib" options))
+(def new-pr-url (create-pull-request token
+                                     "https://github.com/eamonnsullivan/github-pr-lib" options))
 ```
 The `title`, `base` and `branch` are mandatory. You can omit the `body`, and the `draft` and `maintainerCanModify` options default to true.
 
@@ -42,7 +43,8 @@ Only handles issue comments on pull requests at the moment. The body text can us
 ```
 ### Edit an issue comment
 ```
-(edit-pull-request-comment token comment-link "The new body for the comment, with *some markdown* and `stuff`.")
+(edit-pull-request-comment token comment-link
+                           "The new body for the comment, with *some markdown* and `stuff`.")
 ```
 ### Close a pull request
 ```
@@ -62,6 +64,11 @@ Only handles issue comments on pull requests at the moment. The body text can us
                     :mergeMethod "MERGE" or "REBASE" or "SQUASH"
                     :authorEmail "someone@somwhere.com"})
 (merge-pull-request token new-pr-url merge-options)
+```
+### Misc. info
+```
+;; Various bits of information, such as whether it is mergeable or a draft.
+(get-pull-request-info token new-pr-url)
 ```
 ## Development Notes
 
