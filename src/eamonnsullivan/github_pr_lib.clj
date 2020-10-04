@@ -1,23 +1,24 @@
 (ns eamonnsullivan.github-pr-lib
   (:require [clj-http.client :as client]
             [clojure.string :as string]
-            [clojure.data.json :as json]))
+            [clojure.data.json :as json]
+            [clojure.java.io :as io]))
 
 (def github-url "https://api.github.com/graphql")
 (def ^:dynamic *search-page-size* 50)
 
-(def get-repo-id-query (slurp "./src/eamonnsullivan/graphql/get-repo-id-query.graphql"))
-(def create-pull-request-mutation (slurp "./src/eamonnsullivan/graphql/create-pull-request-mutation.graphql"))
-(def search-for-pr-id-query (slurp "./src/eamonnsullivan/graphql/search-for-pr-id-query.graphql"))
-(def update-pull-request-mutation (slurp "./src/eamonnsullivan/graphql/update-pull-request-mutation.graphql"))
-(def mark-ready-for-review-mutation (slurp "./src/eamonnsullivan/graphql/mark-ready-for-review-mutation.graphql"))
-(def add-comment-mutation (slurp "./src/eamonnsullivan/graphql/add-comment-mutation.graphql"))
-(def edit-comment-mutation (slurp "./src/eamonnsullivan/graphql/edit-comment-mutation.graphql"))
-(def close-pull-request-mutation (slurp "./src/eamonnsullivan/graphql/close-pull-request-mutation.graphql"))
-(def reopen-pull-request-mutation (slurp "./src/eamonnsullivan/graphql/reopen-pull-request-mutation.graphql"))
-(def merge-pull-request-mutation (slurp "./src/eamonnsullivan/graphql/merge-pull-request-mutation.graphql"))
-(def pull-request-query (slurp "./src/eamonnsullivan/graphql/pull-request-query.graphql"))
-(def search-for-issue-comment-id (slurp "./src/eamonnsullivan/graphql/search-for-issue-comment-id-query.graphql"))
+(def get-repo-id-query (slurp (io/resource "./graphql/get-repo-id-query.graphql")))
+(def create-pull-request-mutation (slurp (io/resource "./graphql/create-pull-request-mutation.graphql")))
+(def search-for-pr-id-query (slurp (io/resource "./graphql/search-for-pr-id-query.graphql")))
+(def update-pull-request-mutation (slurp (io/resource "./graphql/update-pull-request-mutation.graphql")))
+(def mark-ready-for-review-mutation (slurp (io/resource "./graphql/mark-ready-for-review-mutation.graphql")))
+(def add-comment-mutation (slurp (io/resource "./graphql/add-comment-mutation.graphql")))
+(def edit-comment-mutation (slurp (io/resource "./graphql/edit-comment-mutation.graphql")))
+(def close-pull-request-mutation (slurp (io/resource "./graphql/close-pull-request-mutation.graphql")))
+(def reopen-pull-request-mutation (slurp (io/resource "./graphql/reopen-pull-request-mutation.graphql")))
+(def merge-pull-request-mutation (slurp (io/resource "./graphql/merge-pull-request-mutation.graphql")))
+(def pull-request-query (slurp (io/resource "./graphql/pull-request-query.graphql")))
+(def search-for-issue-comment-id (slurp (io/resource "./graphql/search-for-issue-comment-id-query.graphql")))
 
 (defn request-opts
   "Add the authorization header to the http request options."

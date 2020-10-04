@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>eamonnsullivan</groupId>
   <artifactId>github-pr-lib</artifactId>
-  <version>0.0.8</version>
+  <version>0.0.9</version>
   <name>github-pr-lib</name>
   <description>Small library for creating and modifying Github pull requests.</description>
   <url>https://github.com/eamonnsullivan/github-pr-lib</url>
@@ -33,7 +33,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
-      <version>1.10.1</version>
+      <version>1.10.1</version>http://clojure.java.io/resource
     </dependency>
     <dependency>
       <groupId>clj-http</groupId>
