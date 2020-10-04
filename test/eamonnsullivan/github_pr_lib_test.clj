@@ -8,8 +8,6 @@
 (def repo-id-response-failure (slurp "./test/eamonnsullivan/fixtures/repo-response-failure.json"))
 (def create-pr-response-success (slurp "./test/eamonnsullivan/fixtures/create-pr-response-success.json"))
 (def create-pr-response-failure (slurp "./test/eamonnsullivan/fixtures/create-pr-response-failure.json"))
-(def first-comment-search-page (slurp "./test/eamonnsullivan/fixtures/first-page-comments.json"))
-(def second-comment-search-page (slurp "./test/eamonnsullivan/fixtures/second-page-comments.json"))
 (def update-pr-success (slurp "./test/eamonnsullivan/fixtures/update-pr-success.json"))
 (def update-pr-failure (slurp "./test/eamonnsullivan/fixtures/update-pr-failure.json"))
 (def mark-ready-success (slurp "./test/eamonnsullivan/fixtures/mark-ready-success.json"))
@@ -163,20 +161,12 @@
         {:body page1}))))
 
 (deftest test-get-issue-comment-id
-  (with-redefs [sut/http-post (fake-paging-post first-comment-search-page second-comment-search-page)]
-    (testing "finds comment id"
-      (is (= "MDEyOklzc3VlQ29tbWVudDcwMjA3NjE0Ng=="
-             (sut/get-issue-comment-id
-              "secret"
-              "https://github.com/eamonnsullivan/github-pr-lib/pull/4#issuecomment-702076146")))
-      (is (= "MDEyOklzc3VlQ29tbWVudDcwMjA5MjY4Mg=2"
-             (sut/get-issue-comment-id
-              "secret"
-              "https://github.com/eamonnsullivan/github-pr-lib/pull/4#issuecomment-702092683")))
-      (is (= nil
-             (sut/get-issue-comment-id
-              "secret"
-              "https://github.com/eamonnsullivan/github-pr-lib/pull/4#issuecomment-70207614999"))))))
+  (with-redefs [sut/http-get (fn [_ _ _] {:body "{\"node_id\": \"a-node-id\"}"})]
+    (testing "finds the node id in the body"
+      (is (= "a-node-id" (sut/get-issue-comment-id "secret" "https://github.com/owner/name/pull/1#issuecomment-1")))))
+  (with-redefs [sut/http-get (fn [_ _ _] {:body "{}"})]
+    (testing "returns nil on failure"
+      (is (= nil (sut/get-issue-comment-id "secret" "https://github.com/owner/name/pull/1#issuecomment-1"))))))
 
 (deftest test-update-pull-request
   (with-redefs [sut/get-open-pr-id (fn [_ _] "some-id")
@@ -316,7 +306,7 @@
            (:pullRequestUrl (sut/parse-comment-url "https://github.com/eamonnsullivan/github-pr-lib/pull/4#issuecomment-702092682"))))
     (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
            (:pullRequestUrl (sut/parse-comment-url "eamonnsullivan/github-pr-lib/pull/4#issuecomment-702092682"))))
-    (is (= "#issuecomment-702092682"
+    (is (= "702092682"
            (:issueComment (sut/parse-comment-url "eamonnsullivan/github-pr-lib/pull/4#issuecomment-702092682")))))
   (testing "return nil when a pull request url can't be found"
     (is (= nil

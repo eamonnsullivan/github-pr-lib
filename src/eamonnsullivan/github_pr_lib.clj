@@ -50,6 +50,17 @@
          body (json/read-str (:body response) :key-fn keyword)]
      (:node_id body))))
 
+(defn get-comment-node-id
+  "Get the node id of a pull request comment using the v3 REST API."
+  [access-token owner repo comment-number]
+  (let [url (str "https://api.github.com/repos/" owner
+                 "/" repo
+                 "/issues/comments/" comment-number)
+        response (http-get access-token url {:throw-exceptions false
+                                             :access "application/vnd.github.v3+json"})
+        body (json/read-str (:body response) :key-fn keyword)]
+    (:node_id body)))
+
 (defn make-graphql-post
 "Make a GraphQL request to Github using the provided query/mutation
   and variables. If there are any errors, throw a RuntimeException,
@@ -86,14 +97,14 @@
 (defn parse-comment-url
 "Get the full comment url and pull request url from an issue comment URL."
 [comment-url]
-(let [matches (re-matches #"(https://github.com/)?([^/]*)/([^/]*)/pull/([0-9]*)#(issuecomment-[0-9]*)" comment-url)
+(let [matches (re-matches #"(https://github.com/)?([^/]*)/([^/]*)/pull/([0-9]*)#issuecomment-([0-9]*)" comment-url)
       [_ _ owner name number comment] matches]
   (if (and (not-empty owner)
            (not-empty name)
            (not-empty number)
            (not-empty comment))
     {:pullRequestUrl (format "https://github.com/%s/%s/pull/%s" owner name number)
-     :issueComment (format "#%s" comment)}
+     :issueComment comment}
     nil)))
 
 (defn get-repo-id
@@ -125,31 +136,16 @@
          name (:name repo)]
      (get-pull-request-node-id access-token owner name prnum (if must-be-open? "open" "all")))))
 
-(defn get-page-of-issue-comments
-  "Get a page of issues comments on a particular pull request"
-  [access-token pull-request-id page-size cursor]
-  (let [variables {:pullRequestId pull-request-id :first page-size :after cursor}]
-    (make-graphql-post access-token search-for-issue-comment-id variables)))
-
 (defn get-issue-comment-id
   "Find the unique ID of an issue comment on a pull request. Returns nil if not found."
   [access-token comment-url]
-  (let [prurl (:pullRequestUrl (parse-comment-url comment-url))]
-    (if prurl
-      (let [prnum (get-pull-request-id access-token prurl false)
-            page (get-page-of-issue-comments access-token prnum *search-page-size* nil)]
-        (loop [page page
-               comments []]
-          (let [pageInfo (-> page :data :node :comments :pageInfo)
-                has-next (:hasNextPage pageInfo)
-                cursor (:endCursor pageInfo)
-                nodes (-> page :data :node :comments :nodes)
-                comments (concat comments nodes)]
-            (if-not has-next
-              (:id (first (filter #(= (:url %) comment-url) comments)))
-              (recur (get-page-of-issue-comments access-token prnum *search-page-size* cursor)
-                     comments)))))
-      nil)))
+  (let [repo (parse-repo comment-url)
+        owner (:owner repo)
+        name (:name repo)
+        comment-info (parse-comment-url comment-url)
+        comment (:issueComment comment-info)]
+    (get-comment-node-id access-token owner name comment)))
+
 
 (defn get-open-pr-id
   "Find the unique ID of an open pull request. Returns nil of none are found."
