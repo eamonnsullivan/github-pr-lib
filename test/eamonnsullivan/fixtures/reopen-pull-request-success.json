@@ -3,7 +3,7 @@
     "reopenPullRequest": {
       "pullRequest": {
         "id": "MDExOlB1bGxSZXF1ZXN0NDk2MTc5NTY2",
-        "permalink": "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
+        "permalink": "https://github.com/eamonnsullivan/github-pr-lib/pull/4",
         "title": "Get additional information on pull requests",
         "body": "Also refactors getting the node id of pull requests and comments. We don't need to do paging requests, just use the old v3 REST API.\nIn addition, I also moved the text fixtures out of the jar file.",
         "baseRefOid": "ae9e6802cd7bf6f3610352af5a5890c304f3ee51",
