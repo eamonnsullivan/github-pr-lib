@@ -9,7 +9,7 @@ You will need a Github access token with `repo` permissions. This is one way to 
 (def token (System/getenv "GITHUB_ACCESS_TOKEN"))
 ```
 
-All of these methods return the permalink of the new or updated pull request or comment, e.g., `https://github.com/eamonnsullivan/github-pr-lib/pulls/1`.
+All of these methods return a map of information about the new or updated pull request or comment, such as the `:body` (in markdown), `:title`, `:permalink` or whether the pull request `:isDraft` or `:mergeable`.
 
 ### Create a new pull request
 ```
@@ -19,10 +19,11 @@ All of these methods return the permalink of the new or updated pull request or 
               :branch "the name of the branch you want to merge"
               :draft true
               :maintainerCanModify true})
-(def new-pr-url (create-pull-request token
-                                     "https://github.com/eamonnsullivan/github-pr-lib" options))
+(def new-pr-url (:permalink (create-pull-request
+                 token
+                 "https://github.com/eamonnsullivan/github-pr-lib" options)))
 ```
-The `title`, `base` and `branch` are mandatory. You can omit the `body`, and the `draft` and `maintainerCanModify` options default to true.
+The `:title`, `:base` and `:branch` are mandatory. You can omit the `:body`, and the `:draft` and `:maintainerCanModify` options default to true.
 
 ### Update a pull request
 ```

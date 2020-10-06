@@ -24,6 +24,11 @@
 (def merge-pull-request-failure (slurp "./test/eamonnsullivan/fixtures/merge-pull-request-failure.json"))
 (def pull-request-properties (slurp "./test/eamonnsullivan/fixtures/pull-request-properties.json"))
 
+(defn has-value
+  [key value]
+  (fn [m]
+    (= value (m key))))
+
 (deftest test-get-repo-id
   (with-redefs [sut/http-post (fn [_ _ _] {:body repo-id-response-success})]
     (testing "parses id from successful response"
@@ -62,14 +67,17 @@
 (deftest test-create-pull-request
   (with-redefs [sut/http-post (make-fake-post repo-id-response-success create-pr-response-success nil nil)]
     (testing "Creates a pull request and returns the id"
-      (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/1"
-             (sut/create-pull-request "secret-token" {:owner "owner"
-                                                      :name "repo-name"
-                                                      :title "some title"
-                                                      :body "A body"
-                                                      :base "main"
-                                                      :branch "new-stuff"
-                                                      :draft false})))))
+      (let [response (sut/create-pull-request "secret-token" {:owner "owner"
+                                                              :name "repo-name"
+                                                              :title "some title"
+                                                              :body "A body"
+                                                              :base "main"
+                                                              :branch "new-stuff"
+                                                              :draft false})]
+        (is (has-value :permalink "https://github.com/eamonnsullivan/github-pr-lib/pull/1") response)
+        (is (has-value :isDraft false) response)
+        (is (has-value :body "A body") response)
+        (is (has-value :merged false) response))))
   (with-redefs [sut/http-post (make-fake-post repo-id-response-success create-pr-response-failure nil nil)]
     (testing "Throws exception on create error"
       (is (thrown-with-msg? RuntimeException #"A pull request already exists for eamonnsullivan:create."
@@ -151,15 +159,6 @@
     (testing "returns nil on failure"
       (is (= nil (sut/get-pull-request-id "secret" "https://github.com/owner/name/pull/2"))))))
 
-(defn fake-paging-post
-  [page1 page2]
-  (fn [_ payload _]
-    (let [variables (:variables (json/read-str payload :key-fn keyword))
-          after (:after variables)]
-      (if after
-        {:body page2}
-        {:body page1}))))
-
 (deftest test-get-issue-comment-id
   (with-redefs [sut/http-get (fn [_ _ _] {:body "{\"node_id\": \"a-node-id\"}"})]
     (testing "finds the node id in the body"
@@ -172,9 +171,10 @@
   (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body update-pr-success})]
     (testing "updates a pull request"
-      (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/3" (sut/update-pull-request "secret"
-                                                                                               "https://github.com/eamonnsullivan/github-pr-lib/pull/3"
-                                                                                               {:title "A new title" :body "A new body"})))))
+      (is (has-value :permalink "https://github.com/eamonnsullivan/github-pr-lib/pull/3")
+          (sut/update-pull-request "secret"
+                                   "https://github.com/eamonnsullivan/github-pr-lib/pull/3"
+                                   {:title "A new title" :body "A new body"}))))
   (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body update-pr-failure})]
     (testing "Throws exception on update error"
@@ -186,8 +186,10 @@
   (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body mark-ready-success})]
     (testing "marks pull request as ready for review"
-      (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/3" (sut/mark-ready-for-review "secret"
-                                                                                                 "https://github.com/eamonnsullivan/github-pr-lib/pull/3")))))
+      (is (has-value :permalink "https://github.com/eamonnsullivan/github-pr-lib/pull/3")
+             (sut/mark-ready-for-review
+              "secret"
+              "https://github.com/eamonnsullivan/github-pr-lib/pull/3"))))
   (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body mark-ready-failure})]
     (testing "Throws exception on error"
@@ -199,9 +201,11 @@
   (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body add-comment-success})]
     (testing "adds comment to pull request"
-      (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4#issuecomment-702076146" (sut/add-pull-request-comment "secret"
-                                                                                                                           "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
-                                                                                                                           "This is a comment.")))))
+      (is (has-value :permalink "https://github.com/eamonnsullivan/github-pr-lib/pull/4#issuecomment-702076146")
+          (sut/add-pull-request-comment
+           "secret"
+           "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
+           "This is a comment."))))
   (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body add-comment-failure})]
     (testing "Throws exception on error"
@@ -215,11 +219,11 @@
                 sut/get-issue-comment-id (fn [_ _] "comment-id")
                 sut/http-post (fn [_ _ _] {:body edit-comment-success})]
     (testing "edits comment on pull request"
-      (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4#issuecomment-702069017"
-             (sut/edit-pull-request-comment
-              "secret"
-              "https://github.com/eamonnsullivan/github-pr-lib/pull/4#issuecomment-702069017"
-              "This is an updated comment.")))))
+      (is (has-value :url "https://github.com/eamonnsullivan/github-pr-lib/pull/4#issuecomment-702069017")
+          (sut/edit-pull-request-comment
+           "secret"
+           "https://github.com/eamonnsullivan/github-pr-lib/pull/4#issuecomment-702069017"
+           "This is an updated comment."))))
   (with-redefs [sut/get-pull-request-id (fn [_ _ _] "some-id")
                 sut/get-issue-comment-id (fn [_ _] "comment-id")
                 sut/http-post (fn [_ _ _] {:body edit-comment-failure})]
@@ -234,8 +238,10 @@
   (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body close-pull-request-success})]
     (testing "closes a pull request"
-      (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4" (sut/close-pull-request "secret"
-                                                                                              "https://github.com/eamonnsullivan/github-pr-lib/pull/4")))))
+      (is (has-value :permalink "https://github.com/eamonnsullivan/github-pr-lib/pull/4")
+          (sut/close-pull-request
+           "secret"
+           "https://github.com/eamonnsullivan/github-pr-lib/pull/4"))))
   (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body close-pull-request-failure})]
     (testing "Throws exception on error"
@@ -247,8 +253,10 @@
   (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body reopen-pull-request-success})]
     (testing "reopens a pull request"
-      (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4" (sut/reopen-pull-request "secret"
-                                                                                               "https://github.com/eamonnsullivan/github-pr-lib/pull/4")))))
+      (is (has-value :permalink "https://github.com/eamonnsullivan/github-pr-lib/pull/4")
+          (sut/reopen-pull-request
+           "secret"
+           "https://github.com/eamonnsullivan/github-pr-lib/pull/4"))))
   (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")
                 sut/http-post (fn [_ _ _] {:body reopen-pull-request-failure})]
     (testing "Throws exception on error"
@@ -268,10 +276,12 @@
                 sut/get-pull-request-info (fn [_ _] {:headRefOid "commit-id"})
                 sut/http-post (fn [_ _ _] {:body merge-pull-request-success})]
     (testing "merges a pull request"
-      (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4" (sut/merge-pull-request "secret"
-                                                                                              "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
-                                                                                              {:title "a commit" :body "some description"
-                                                                                               :author-email "someone@somewhere.com"})))))
+      (is (has-value :permalink "https://github.com/eamonnsullivan/github-pr-lib/pull/4")
+          (sut/merge-pull-request
+           "secret"
+           "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
+           {:title "a commit" :body "some description"
+            :author-email "someone@somewhere.com"}))))
   (with-redefs [sut/get-pull-request-id (fn [_ _] "some id")
                 sut/get-pull-request-info (fn [_ _] {:headRefOid "commit-id"})
                 sut/http-post (fn [_ _ _] {:body merge-pull-request-failure})]
@@ -293,11 +303,14 @@
   (with-redefs [sut/get-pull-request-id (fn [_ _] "some id")
                 sut/get-pull-request-info (fn [_ _] {:headRefOid "commit-id"})
                 sut/http-post (make-fake-post nil merge-pull-request-success nil assert-merge-payload-defaults)]
-    (testing "merges a pull request"
-      (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4" (sut/merge-pull-request "secret"
-                                                                                              "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
-                                                                                              {:title "a commit" :body "some description"
-                                                                                               :author-email "someone@somewhere.com"}))))))
+    (testing "merges a pull request with defaults"
+      (is (has-value :permalink "https://github.com/eamonnsullivan/github-pr-lib/pull/4")
+          (sut/merge-pull-request
+           "secret"
+           "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
+           {:title "a commit" :body "some description"
+            :author-email "someone@somewhere.com"})))))
+
 (deftest test-get-pr-from-comment-url
   (testing "parses a pull request url from a comment url"
     (is (= "https://github.com/eamonnsullivan/github-pr-lib/pull/4"
