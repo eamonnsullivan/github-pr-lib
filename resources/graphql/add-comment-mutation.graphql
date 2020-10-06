@@ -4,6 +4,17 @@ mutation AddComment ($pullRequestId: ID!, $body: String!) {
       node {
         id
         url
+        author {
+          login
+          url
+        }
+        body
+        createdAt
+        editor {
+          login
+          url
+        }
+        updatedAt
       }
     }
   }

@@ -28,8 +28,8 @@
 
 (defn http-get
   "Make a GET request to a url, with options"
-  [access-token url options]
-  (client/get url (merge {:username access-token} options)))
+  [access-token url opts]
+  (client/get url (merge {:username access-token} opts)))
 
 (defn get-pull-request-node-id
   "Get the node id of a pull request using the v3 REST api, optionally
@@ -40,9 +40,10 @@
    (let [url (str "https://api.github.com/repos/" owner
                   "/" repo-name
                   "/pulls/" pull-number)
-         response (http-get access-token url {:throw-exceptions false
-                                              :accept "application/vnd.github.v3+json"
-                                              :query-params {"state" state}})
+         response (http-get access-token url (merge (request-opts access-token)
+                                                    {:throw-exceptions false
+                                                     :accept "application/vnd.github.v3+json"
+                                                     :query-params {"state" state}}))
          body (json/read-str (:body response) :key-fn keyword)]
      (:node_id body))))
 
@@ -52,8 +53,9 @@
   (let [url (str "https://api.github.com/repos/" owner
                  "/" repo
                  "/issues/comments/" comment-number)
-        response (http-get access-token url {:throw-exceptions false
-                                             :accept "application/vnd.github.v3+json"})
+        response (http-get access-token url (merge (request-opts access-token)
+                                                   {:throw-exceptions false
+                                                    :accept "application/vnd.github.v3+json"}))
         body (json/read-str (:body response) :key-fn keyword)]
     (:node_id body)))
 
@@ -196,7 +198,9 @@
   indicating whether the repo owner is allowed to modify the pull
   request.
 
-  Returns the pull request's permanent URL.
+  Returns a map describing the pull request,
+  including :title, :body, :permalink, :additions, :deletions
+  and :revertUrl.
   "
   ([access-token url pull-request]
    (let [repo (parse-repo url)]
@@ -224,8 +228,7 @@
        (-> (make-graphql-post access-token create-pull-request-mutation variables)
            :data
            :createPullRequest
-           :pullRequest
-           :permalink)))))
+           :pullRequest)))))
 
 (defn update-pull-request
   "Update an existing pull request.
@@ -239,14 +242,15 @@
 
   * updated -- a map describing the update. The keys: :title, :body.
 
-  Returns the pull request's permanent URL.
+  Returns a map describing the pull request,
+  including :title, :body, :permalink, :additions, :deletions
+  and :revertUrl.
   "
   [access-token pull-request-url updated]
   (-> (modify-pull-request access-token pull-request-url update-pull-request-mutation updated)
       :data
       :updatePullRequest
-      :pullRequest
-      :permalink))
+      :pullRequest))
 
 (defn mark-ready-for-review
   "Mark a pull request as ready for review.
@@ -260,14 +264,15 @@
   https://github.com/owner/name/pull/1) or
   partial (owner/name/pull/1) URL of the pull request.
 
-  Returns the pull request's permanent URL.
+  Returns a map describing the pull request,
+  including :title, :body, :permalink, :additions, :deletions
+  and :revertUrl.
   "
   [access-token pull-request-url]
   (-> (modify-pull-request access-token pull-request-url mark-ready-for-review-mutation)
       :data
       :markPullRequestReadyForReview
-      :pullRequest
-      :permalink))
+      :pullRequest))
 
 (defn add-pull-request-comment
   "Add a top-level comment to a pull request.
@@ -282,15 +287,14 @@
 
   * comment-body -- the comment to add.
 
-  Returns the comment's permanent URL.
+  Returns information about the comment, including its :url and :body.
   "
   [access-token pull-request-url comment-body]
   (-> (modify-pull-request access-token pull-request-url add-comment-mutation {:body comment-body})
       :data
       :addComment
       :commentEdge
-      :node
-      :url))
+      :node))
 
 (defn edit-pull-request-comment
   "Changes the body of a comment
@@ -304,14 +308,13 @@
 
   * comment-body -- the new body of the comment.
 
-  Returns the comment's permanent URL.
+  Returns information about the comment, including its :url and :body.
   "
   [access-token comment-url comment-body]
   (-> (modify-comment access-token comment-url edit-comment-mutation {:body comment-body})
       :data
       :updateIssueComment
-      :issueComment
-      :url))
+      :issueComment))
 
 (defn close-pull-request
   "Change the status of a pull request to closed.
@@ -323,13 +326,15 @@
   * pull-request-url -- the full (e.g.,
   https://github.com/owner/name/pull/1) or
   partial (owner/name/pull/1) URL of the pull request.
-  "
+
+  Returns a map describing the pull request,
+  including :title, :body, :permalink, :additions, :deletions
+  and :revertUrl."
   [access-token pull-request-url]
   (-> (modify-pull-request access-token pull-request-url close-pull-request-mutation)
       :data
       :closePullRequest
-      :pullRequest
-      :permalink))
+      :pullRequest))
 
 (defn reopen-pull-request
   "Change the status of a pull request to open.
@@ -341,13 +346,15 @@
   * pull-request-url -- the full (e.g.,
   https://github.com/owner/name/pull/1) or
   partial (owner/name/pull/1) URL of the pull request.
-  "
+
+  Returns a map describing the pull request,
+  including :title, :body, :permalink, :additions, :deletions
+  and :revertUrl."
   [access-token pull-request-url]
   (-> (modify-pull-request access-token pull-request-url reopen-pull-request-mutation)
       :data
       :reopenPullRequest
-      :pullRequest
-      :permalink))
+      :pullRequest))
 
 (defn merge-pull-request
   "Merge a pull request.
@@ -365,7 +372,11 @@
   commit), :mergeMethod (default \"SQUASH\", but can also be
   \"MERGE\" or \"REBASE\") and :authorEmail.
 
-  All of these fields are optional."
+  All of these input fields are optional.
+
+  Returns a map describing the pull request,
+  including :title, :body, :permalink, :additions, :deletions
+  and :revertUrl."
   [access-token pull-request-url merge-options]
   (let [prinfo (get-pull-request-info access-token pull-request-url)
         expected-head-ref (:headRefOid prinfo)]
@@ -374,6 +385,5 @@
         (-> (modify-pull-request access-token pull-request-url merge-pull-request-mutation opts)
             :data
             :mergePullRequest
-            :pullRequest
-            :permalink))
+            :pullRequest))
       (throw (ex-info "Pull request not found" {:pullRequestUrl pull-request-url})))))

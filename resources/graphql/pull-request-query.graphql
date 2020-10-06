@@ -11,7 +11,6 @@ query PullRequestQuery ($pullRequestId: ID!) {
         login
         url
       }
-      body
       closed
       isDraft
       merged
@@ -21,6 +20,32 @@ query PullRequestQuery ($pullRequestId: ID!) {
         id
         url
       }
+      state
+      additions
+      deletions
+      changedFiles
+      checksResourcePath
+      closed
+      closedAt
+      createdAt
+      isDraft
+      maintainerCanModify
+      mergeCommit {
+        abbreviatedOid
+        message
+        messageBody
+        messageHeadline
+      }
+      mergeable
+      merged
+      mergedAt
+      mergedBy {
+        login
+        url
+      }
+      number
+      permalink
+      revertUrl
       state
     }
   }

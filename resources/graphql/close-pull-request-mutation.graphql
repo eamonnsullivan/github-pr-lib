@@ -2,7 +2,51 @@ mutation ClosePullRequest ($pullRequestId: ID!) {
   closePullRequest(input: {pullRequestId: $pullRequestId}) {
     pullRequest {
       id
+      title
+      body
+      baseRefOid
+      headRefOid
       permalink
+      author {
+        login
+        url
+      }
+      closed
+      isDraft
+      merged
+      mergeable
+      number
+      repository {
+        id
+        url
+      }
+      state
+      additions
+      deletions
+      changedFiles
+      checksResourcePath
+      closed
+      closedAt
+      createdAt
+      isDraft
+      maintainerCanModify
+      mergeCommit {
+        abbreviatedOid
+        message
+        messageBody
+        messageHeadline
+      }
+      mergeable
+      merged
+      mergedAt
+      mergedBy {
+        login
+        url
+      }
+      number
+      permalink
+      revertUrl
+      state
     }
   }
 }
