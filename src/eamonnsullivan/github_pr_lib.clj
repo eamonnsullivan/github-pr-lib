@@ -132,7 +132,9 @@
          prnum (pull-request-number url)
          owner (:owner repo)
          name (:name repo)]
-     (get-pull-request-node-id access-token owner name prnum (if must-be-open? "open" "all")))))
+     (or
+      (get-pull-request-node-id access-token owner name prnum (if must-be-open? "open" "all"))
+      (throw (ex-info (format "Could not find pull request: %s" url) {}))))))
 
 (defn get-issue-comment-id
   "Find the unique ID of an issue comment on a pull request. Returns nil if not found."
@@ -141,7 +143,9 @@
         owner (:owner repo)
         name (:name repo)
         comment (:issueComment (parse-comment-url comment-url))]
-    (get-comment-node-id access-token owner name comment)))
+    (or
+     (get-comment-node-id access-token owner name comment)
+     (throw (ex-info (format "Could not find comment: %s" comment-url) {})))))
 
 
 (defn get-pull-request-info
@@ -377,13 +381,15 @@
   Returns a map describing the pull request,
   including :title, :body, :permalink, :additions, :deletions
   and :revertUrl."
-  [access-token pull-request-url merge-options]
-  (let [prinfo (get-pull-request-info access-token pull-request-url)
-        expected-head-ref (:headRefOid prinfo)]
-    (if expected-head-ref
-      (let [opts (merge {:mergeMethod "SQUASH"} merge-options {:expectedHeadRef expected-head-ref})]
-        (-> (modify-pull-request access-token pull-request-url merge-pull-request-mutation opts)
-            :data
-            :mergePullRequest
-            :pullRequest))
-      (throw (ex-info "Pull request not found" {:pullRequestUrl pull-request-url})))))
+  ([access-token pull-request-url]
+   (merge-pull-request access-token pull-request-url nil))
+  ([access-token pull-request-url merge-options]
+   (let [prinfo (get-pull-request-info access-token pull-request-url)
+         expected-head-ref (:headRefOid prinfo)]
+     (if expected-head-ref
+       (let [opts (merge {:mergeMethod "SQUASH"} merge-options {:expectedHeadRef expected-head-ref})]
+         (-> (modify-pull-request access-token pull-request-url merge-pull-request-mutation opts)
+             :data
+             :mergePullRequest
+             :pullRequest))
+       (throw (ex-info "Pull request not found" {:pullRequestUrl pull-request-url}))))))

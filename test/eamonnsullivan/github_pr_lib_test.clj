@@ -156,16 +156,18 @@
     (testing "finds the node id in the body"
       (is (= "a-node-id" (sut/get-pull-request-id "secret" "https://github.com/owner/name/pull/1")))))
   (with-redefs [sut/http-get (fn [_ _ _] {:body "{}"})]
-    (testing "returns nil on failure"
-      (is (= nil (sut/get-pull-request-id "secret" "https://github.com/owner/name/pull/2"))))))
+    (testing "Throws exception on failure"
+      (is (thrown-with-msg? RuntimeException #"Could not find pull request: https://github.com/owner/name/pull/2"
+                            (sut/get-pull-request-id "secret" "https://github.com/owner/name/pull/2"))))))
 
 (deftest test-get-issue-comment-id
   (with-redefs [sut/http-get (fn [_ _ _] {:body "{\"node_id\": \"a-node-id\"}"})]
     (testing "finds the node id in the body"
       (is (= "a-node-id" (sut/get-issue-comment-id "secret" "https://github.com/owner/name/pull/1#issuecomment-1")))))
   (with-redefs [sut/http-get (fn [_ _ _] {:body "{}"})]
-    (testing "returns nil on failure"
-      (is (= nil (sut/get-issue-comment-id "secret" "https://github.com/owner/name/pull/1#issuecomment-1"))))))
+    (testing "Throws exception on failure"
+      (is (thrown-with-msg? RuntimeException #"Could not find comment: https://github.com/owner/name/pull/1#issuecomment-1"
+                            (sut/get-issue-comment-id "secret" "https://github.com/owner/name/pull/1#issuecomment-1"))))))
 
 (deftest test-update-pull-request
   (with-redefs [sut/get-pull-request-id (fn [_ _] "some-id")

@@ -11,6 +11,14 @@
                  :sha "f7ef16dc3b8332b0d77bc0274578ad5270fbfedd"}}
    :main-opts ["-m" "cognitect.test-runner"
                "-d" "test"]}
+  :cloverage
+  {:extra-paths ["test"]
+   :extra-deps {cloverage/cloverage {:mvn/version "RELEASE"}}
+   :main-opts ["-m"
+               "cloverage.coverage"
+               "-p" "src"
+               "-s" "test"
+               "--fail-threshold" "90"]}
   :jar {:extra-deps {seancorfield/depstar {:mvn/version "1.1.104"}}
         :main-opts ["-m" "hf.depstar.jar" "github-pr-lib.jar"]}
   :install {:extra-deps {deps-deploy/deps-deploy {:mvn/version "0.0.9"}}
