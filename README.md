@@ -77,6 +77,10 @@ To run the project's tests:
 
     $ clojure -A:test:runner -M:runner
 
+To check test coverage:
+
+    $ clojure -A:test:cloverage
+
 To build a deployable jar of this library:
 
     $ clojure -Spom               # to update any dependencies
