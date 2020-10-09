@@ -19,4 +19,4 @@ jobs:
     - name: Run tests
       run: clojure -A:test:runner -M:runner
     - name: Check for minimum coverage
-      run: clojure -A:test:coverage
+      run: clojure -A:test:cloverage
