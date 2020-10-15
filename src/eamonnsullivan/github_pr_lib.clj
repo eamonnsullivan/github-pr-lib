@@ -124,7 +124,8 @@
 (defn get-pull-request-id
   "Find the unique ID of a pull request on the repository at the
   provided url. Set must-be-open? to true to filter the pull requests
-  to those with a status of open. Returns nil if not found."
+  to those with a status of open. Throws a runtime exception if the
+  pull request isn't found."
   ([access-token url]
    (get-pull-request-id access-token url false))
   ([access-token url must-be-open?]

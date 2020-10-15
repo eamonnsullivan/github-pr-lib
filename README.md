@@ -4,6 +4,8 @@ A small, very simple library for opening, closing, approving and commenting on p
 
 ## Usage
 
+[![Clojars Project](https://img.shields.io/clojars/v/eamonnsullivan/github-pr-lib.svg)](https://clojars.org/eamonnsullivan/github-pr-lib)
+
 You will need a Github access token with `repo` permissions. This is one way to provide that value:
 ```
 (def token (System/getenv "GITHUB_ACCESS_TOKEN"))
