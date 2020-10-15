@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## [0.0.16]-2020-10-15
+- Fixes docstrings for some methods
+- Tweaks to CI workflow
+
 ## [0.0.12]-2020-10-06
 - Return more information about the comment/pull request
 - Fix authentication for the GET request (to get ids).
