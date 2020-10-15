@@ -32,9 +32,11 @@ jobs:
       env:
         CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
         CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
+    - name: Extract current version
+      run: echo "v`mvn help:evaluate -Dexpression=project.version -q -DforceStdout`" > RELEASE_VERSION
     - name: Create Release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: "v`mvn help:evaluate -Dexpression=project.version -q -DforceStdout`"
+        tag_name: $(cat RELEASE_VERSION)
