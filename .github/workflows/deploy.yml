@@ -27,8 +27,8 @@ jobs:
       run: clojure -Spom
     - name: Build
       run: clojure -A:jar
-    - name: Zip
-      run: zip github-pr-lib.zip github-pr-lib.jar
+    - name: Zip up jar
+      run: zip --junk-paths github-pr-lib github-pr-lib.jar
     - name: Deploy
       run: clojure -A:deploy
       env:
@@ -47,7 +47,6 @@ jobs:
         draft: false
         prerelease: false
     - name: Upload release asset
-      id: upload_jar
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
