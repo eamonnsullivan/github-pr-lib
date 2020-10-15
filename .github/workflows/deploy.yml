@@ -40,4 +40,4 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ GITHUB_ENV.release_version }}
+        tag_name: ${{ $release_version }}
