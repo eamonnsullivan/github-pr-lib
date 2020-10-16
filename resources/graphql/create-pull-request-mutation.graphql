@@ -10,42 +10,30 @@ mutation CreatePullRequest
       maintainerCanModify: $maintainerCanModify
     }) {
     pullRequest {
-      id
-      title
-      body
-      baseRefOid
-      headRefOid
-      permalink
+      additions
       author {
         login
         url
       }
-      closed
-      isDraft
-      merged
-      mergeable
-      number
-      repository {
-        id
-        url
-      }
-      state
-      additions
-      deletions
+      baseRefOid
+      body
       changedFiles
       checksResourcePath
       closed
       closedAt
       createdAt
+      deletions
+      headRefOid
+      id
       isDraft
       maintainerCanModify
+      mergeable
       mergeCommit {
         abbreviatedOid
         message
         messageBody
         messageHeadline
       }
-      mergeable
       merged
       mergedAt
       mergedBy {
@@ -54,8 +42,13 @@ mutation CreatePullRequest
       }
       number
       permalink
+      repository {
+        id
+        url
+      }
       revertUrl
       state
+      title
     }
   }
 }
