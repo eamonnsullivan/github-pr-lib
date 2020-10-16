@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file. This change
 
 ## [0.0.17]-2020-10-16
 - Remove some redundancy from the GraphQL, and rearranged them (alphabetically) to make it easier to spot these.
-- Remove references to maintainerCanModify. It seems like we can't change this. Mutations have no affect and it is always false.
+- Remove references to maintainerCanModify. It seems like we can't change this. Mutations have no effect and it is always false.
 ## [0.0.16]-2020-10-15
 - Fixes docstrings for some methods
 - Tweaks to CI workflow
