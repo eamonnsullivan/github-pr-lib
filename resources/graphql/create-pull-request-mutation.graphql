@@ -1,13 +1,12 @@
 mutation CreatePullRequest
-($title: String!, $body: String, $repositoryId: ID!, $base: String!, $branch: String!, $draft: Boolean!, $maintainerCanModify: Boolean) {
+($title: String!, $body: String, $repositoryId: ID!, $base: String!, $branch: String!, $draft: Boolean!) {
   createPullRequest(input: {
       title: $title,
       body: $body,
       repositoryId: $repositoryId,
       baseRefName: $base,
       headRefName: $branch,
-      draft: $draft,
-      maintainerCanModify: $maintainerCanModify
+      draft: $draft
     }) {
     pullRequest {
       additions

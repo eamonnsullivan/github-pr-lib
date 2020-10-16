@@ -19,19 +19,17 @@ All of these methods return a map of information about the new or updated pull r
               :body "The body of the pull request"
               :base "main or master, usually"
               :branch "the name of the branch you want to merge"
-              :draft true
-              :maintainerCanModify true})
+              :draft true})
 (def new-pr-url (:permalink (create-pull-request
                  token
                  "https://github.com/eamonnsullivan/github-pr-lib" options)))
 ```
-The `:title`, `:base` and `:branch` are mandatory. You can omit the `:body`, and the `:draft` and `:maintainerCanModify` options default to true.
+The `:title`, `:base` and `:branch` are mandatory. You can omit the `:body`, and `:draft` defaults to true.
 
 ### Update a pull request
 ```
 (def updated {:title "A new title"
-              :body "A new body"
-              :maintainerCanModify false})
+              :body "A new body"})
 (update-pull-request token new-pr-url updated)
 ```
 ### Mark a pull request as ready for review

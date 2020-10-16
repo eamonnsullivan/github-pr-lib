@@ -54,15 +54,13 @@
   [payload]
   (testing "the draft and maintainerCanModfy parameters have a default"
     (let [variables (:variables (json/read-str payload :key-fn keyword))]
-      (is (= true (:draft variables)))
-      (is (= true (:maintainerCanModify variables))))))
+      (is (= true (:draft variables))))))
 
 (defn assert-payload-defaults-overridden
   [payload]
-  (testing "the draft and maintainerCanModify parameters can be overridden"
+  (testing "the draft parameter can be overridden"
     (let [variables (:variables (json/read-str payload :key-fn keyword))]
-      (is (= false (:draft variables)))
-      (is (= false (:maintainerCanModify variables))))))
+      (is (= false (:draft variables))))))
 
 (deftest test-create-pull-request
   (with-redefs [sut/http-post (make-fake-post repo-id-response-success create-pr-response-success nil nil)]
@@ -106,13 +104,6 @@
                                                :title "some title"
                                                :body "A body"
                                                :base "main"
-                                               :branch "new-stuff"}))
-    (testing "The maintainerCanModify option defaults to true"
-      (sut/create-pull-request "secret-token" {:owner "owner"
-                                               :name "repo-name"
-                                               :title "some title"
-                                               :body "A body"
-                                               :base "main"
                                                :branch "new-stuff"})))
   (with-redefs [sut/http-post (make-fake-post repo-id-response-success create-pr-response-success nil assert-payload-defaults-overridden)]
     (testing "The defaulted options can be overridden"
@@ -122,8 +113,7 @@
                                                :body "A body"
                                                :base "main"
                                                :branch "new-stuff"
-                                               :draft false
-                                               :maintainerCanModify false}))))
+                                               :draft false}))))
 
 
 (deftest test-parse-repo
