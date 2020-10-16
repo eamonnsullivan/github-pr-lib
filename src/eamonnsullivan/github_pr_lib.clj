@@ -182,8 +182,7 @@
         (make-graphql-post access-token mutation merged-variables)))))
 
 
-(def create-pr-defaults {:draft true
-                         :maintainerCanModify true})
+(def create-pr-defaults {:draft true})
 
 (defn create-pull-request
   "Create a pull request on Github repository.
@@ -197,11 +196,9 @@
   * pull-request -- a map describing the pull
   request. Keys: :title, :base (the base branch), :branch (the branch
   you want to merge) and (if a URL isn't provided) the :owner (or
-  organisation) and :name of the repo. Optional keys
-  include :draft (default: true), indicating whether the pull request
-  is ready for review and :maintainerCanModify (default: true)
-  indicating whether the repo owner is allowed to modify the pull
-  request.
+  organisation) and :name of the repo. Optional key :draft
+  (default: true) indicates whether the pull request
+  is in a draft state and not ready for review.
 
   Returns a map describing the pull request,
   including :title, :body, :permalink, :additions, :deletions
@@ -219,16 +216,14 @@
           body :body
           base-branch :base
           merging-branch :branch
-          draft :draft
-          maintainerCanModify :maintainerCanModify} (merge create-pr-defaults pull-request)
+          draft :draft} (merge create-pr-defaults pull-request)
          repo-id (get-repo-id access-token owner repo-name)
          variables {:repositoryId repo-id
                     :title title
                     :body body
                     :base base-branch
                     :branch merging-branch
-                    :draft draft
-                    :maintainerCanModify maintainerCanModify}]
+                    :draft draft}]
      (when repo-id
        (-> (make-graphql-post access-token create-pull-request-mutation variables)
            :data
